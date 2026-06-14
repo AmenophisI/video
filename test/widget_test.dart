@@ -1,30 +1,109 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:video_player/main.dart';
+import 'package:video_player/src/app/app.dart';
+import 'package:video_player/src/modules/media_access/domain/media_permission.dart';
+import 'package:video_player/src/modules/video/application/video_providers.dart';
+import 'package:video_player/src/modules/video/data/repositories/in_memory_video_repository.dart';
+import 'package:video_player/src/modules/video/data/video_query_preferences_store.dart';
+import 'package:video_player/src/modules/video/domain/video_query.dart';
+import 'package:video_player/src/modules/video/presentation/widgets/playback_progress_bar.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('shows the video library scaffold', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+          mediaPermissionProvider.overrideWith((ref) async {
+            return MediaPermission.granted;
+          }),
+          videoQueryPreferencesStoreProvider.overrideWithValue(
+            _FakeVideoQueryPreferencesStore(),
+          ),
+        ],
+        child: const VideoLibraryApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('動画ライブラリ'), findsOneWidget);
+    expect(find.text('家族旅行.mp4'), findsOneWidget);
+    expect(find.byIcon(Icons.search), findsOneWidget);
+    expect(find.byType(PlaybackProgressBar), findsWidgets);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('shows limited permission guidance when access is partial',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+          mediaPermissionProvider.overrideWith((ref) async {
+            return MediaPermission.limited;
+          }),
+          videoQueryPreferencesStoreProvider.overrideWithValue(
+            _FakeVideoQueryPreferencesStore(),
+          ),
+        ],
+        child: const VideoLibraryApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.textContaining('選択した動画のみ表示しています'), findsOneWidget);
+    expect(find.text('追加選択'), findsOneWidget);
+  });
+
+  testWidgets('clears selection when the library query changes',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+          mediaPermissionProvider.overrideWith((ref) async {
+            return MediaPermission.granted;
+          }),
+          videoQueryPreferencesStoreProvider.overrideWithValue(
+            _FakeVideoQueryPreferencesStore(),
+          ),
+        ],
+        child: const VideoLibraryApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.longPress(find.text('家族旅行.mp4'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('1件選択中'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '料理');
+    await tester.pump();
+
+    expect(find.text('動画ライブラリ'), findsOneWidget);
+    expect(find.text('1件選択中'), findsNothing);
   });
+}
+
+class _FakeVideoQueryPreferencesStore implements VideoQueryPreferences {
+  VideoQuery _query = const VideoQuery();
+
+  @override
+  Future<VideoQuery> load() async => _query;
+
+  @override
+  Future<void> save(VideoQuery query) async {
+    _query = query;
+  }
 }
