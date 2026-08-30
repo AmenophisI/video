@@ -55,11 +55,10 @@ class VideoTile extends StatelessWidget {
       label: semanticParts.join('。'),
       onTapHint: selected ? '選択を解除します' : '動画を再生します',
       onLongPressHint: onLongPress == null ? null : '動画を選択します',
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           onLongPress: onLongPress,
           child: Column(
@@ -67,65 +66,100 @@ class VideoTile extends StatelessWidget {
             children: [
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    VideoThumbnail(video: video),
-                    Positioned(
-                      right: 8,
-                      bottom: showProgress ? 8 : 6,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          child: Text(
-                            formatDuration(video.duration),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (showProgress)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: PlaybackProgressBar(progress: progress),
-                      ),
-                    if (selected)
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      VideoThumbnail(video: video),
                       Positioned.fill(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.20),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.18),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    if (selected)
+                      if (onPreview != null)
+                        Positioned(
+                          left: 6,
+                          top: 6,
+                          child: _PreviewButton(onPressed: onPreview!),
+                        ),
                       Positioned(
-                        left: 8,
-                        top: 8,
-                        child: Icon(
-                          Icons.check_circle,
-                          color: Theme.of(context).colorScheme.primary,
+                        right: 7,
+                        bottom: showProgress ? 12 : 7,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.52),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            child: Text(
+                              formatDuration(video.duration),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
                         ),
                       ),
-                  ],
+                      if (showProgress)
+                        Positioned(
+                          left: 7,
+                          right: 7,
+                          bottom: 6,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: PlaybackProgressBar(progress: progress),
+                          ),
+                        ),
+                      if (selected)
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.20),
+                            ),
+                          ),
+                        ),
+                      if (selected)
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: DecoratedBox(
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -138,30 +172,10 @@ class VideoTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context)
                                 .textTheme
-                                .titleSmall
+                                .bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        if (onPreview != null)
-                          SizedBox.square(
-                            dimension: 48,
-                            child: IconButton(
-                              tooltip: '簡易再生',
-                              iconSize: 18,
-                              onPressed: onPreview,
-                              icon: const Icon(Icons.play_circle_outline),
-                            ),
-                          ),
-                        if (onDetails != null)
-                          SizedBox.square(
-                            dimension: 48,
-                            child: IconButton(
-                              tooltip: '詳細',
-                              iconSize: 18,
-                              onPressed: onDetails,
-                              icon: const Icon(Icons.more_vert),
-                            ),
-                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -169,7 +183,10 @@ class VideoTile extends StatelessWidget {
                       video.folderName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                     if (dateLabel != null || sizeLabel != '--') ...[
                       const SizedBox(height: 2),
@@ -180,7 +197,11 @@ class VideoTile extends StatelessWidget {
                         ].join(' ・ '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
                     if (showTags && video.tags.isNotEmpty) ...[
@@ -192,6 +213,12 @@ class VideoTile extends StatelessWidget {
                           for (final tag in video.tags)
                             Chip(
                               label: Text(tag),
+                              labelStyle:
+                                  Theme.of(context).textTheme.labelSmall,
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              side: BorderSide.none,
                               visualDensity: VisualDensity.compact,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
@@ -203,6 +230,34 @@ class VideoTile extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewButton extends StatelessWidget {
+  const _PreviewButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.45),
+      shape: const CircleBorder(),
+      child: InkResponse(
+        onTap: onPressed,
+        radius: 18,
+        containedInkWell: true,
+        customBorder: const CircleBorder(),
+        child: const SizedBox.square(
+          dimension: 28,
+          child: Icon(
+            Icons.play_arrow,
+            color: Colors.white,
+            size: 18,
           ),
         ),
       ),

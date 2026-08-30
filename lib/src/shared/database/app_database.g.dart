@@ -95,6 +95,24 @@ class $VideoIndexEntriesTable extends VideoIndexEntries
   late final GeneratedColumn<double> frameRate = GeneratedColumn<double>(
       'frame_rate', aliasedName, true,
       type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _videoCodecMeta =
+      const VerificationMeta('videoCodec');
+  @override
+  late final GeneratedColumn<String> videoCodec = GeneratedColumn<String>(
+      'video_codec', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _audioCodecMeta =
+      const VerificationMeta('audioCodec');
+  @override
+  late final GeneratedColumn<String> audioCodec = GeneratedColumn<String>(
+      'audio_codec', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _audioChannelCountMeta =
+      const VerificationMeta('audioChannelCount');
+  @override
+  late final GeneratedColumn<int> audioChannelCount = GeneratedColumn<int>(
+      'audio_channel_count', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _subtitleUriMeta =
       const VerificationMeta('subtitleUri');
   @override
@@ -220,6 +238,9 @@ class $VideoIndexEntriesTable extends VideoIndexEntries
         rotationDegrees,
         bitrate,
         frameRate,
+        videoCodec,
+        audioCodec,
+        audioChannelCount,
         subtitleUri,
         createdAtMs,
         modifiedAtMs,
@@ -326,6 +347,24 @@ class $VideoIndexEntriesTable extends VideoIndexEntries
     if (data.containsKey('frame_rate')) {
       context.handle(_frameRateMeta,
           frameRate.isAcceptableOrUnknown(data['frame_rate']!, _frameRateMeta));
+    }
+    if (data.containsKey('video_codec')) {
+      context.handle(
+          _videoCodecMeta,
+          videoCodec.isAcceptableOrUnknown(
+              data['video_codec']!, _videoCodecMeta));
+    }
+    if (data.containsKey('audio_codec')) {
+      context.handle(
+          _audioCodecMeta,
+          audioCodec.isAcceptableOrUnknown(
+              data['audio_codec']!, _audioCodecMeta));
+    }
+    if (data.containsKey('audio_channel_count')) {
+      context.handle(
+          _audioChannelCountMeta,
+          audioChannelCount.isAcceptableOrUnknown(
+              data['audio_channel_count']!, _audioChannelCountMeta));
     }
     if (data.containsKey('subtitle_uri')) {
       context.handle(
@@ -438,6 +477,12 @@ class $VideoIndexEntriesTable extends VideoIndexEntries
           .read(DriftSqlType.int, data['${effectivePrefix}bitrate']),
       frameRate: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}frame_rate']),
+      videoCodec: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}video_codec']),
+      audioCodec: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}audio_codec']),
+      audioChannelCount: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}audio_channel_count']),
       subtitleUri: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}subtitle_uri']),
       createdAtMs: attachedDatabase.typeMapping
@@ -489,6 +534,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
   final int? rotationDegrees;
   final int? bitrate;
   final double? frameRate;
+  final String? videoCodec;
+  final String? audioCodec;
+  final int? audioChannelCount;
   final String? subtitleUri;
   final int? createdAtMs;
   final int? modifiedAtMs;
@@ -518,6 +566,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
       this.rotationDegrees,
       this.bitrate,
       this.frameRate,
+      this.videoCodec,
+      this.audioCodec,
+      this.audioChannelCount,
       this.subtitleUri,
       this.createdAtMs,
       this.modifiedAtMs,
@@ -566,6 +617,15 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
     }
     if (!nullToAbsent || frameRate != null) {
       map['frame_rate'] = Variable<double>(frameRate);
+    }
+    if (!nullToAbsent || videoCodec != null) {
+      map['video_codec'] = Variable<String>(videoCodec);
+    }
+    if (!nullToAbsent || audioCodec != null) {
+      map['audio_codec'] = Variable<String>(audioCodec);
+    }
+    if (!nullToAbsent || audioChannelCount != null) {
+      map['audio_channel_count'] = Variable<int>(audioChannelCount);
     }
     if (!nullToAbsent || subtitleUri != null) {
       map['subtitle_uri'] = Variable<String>(subtitleUri);
@@ -626,6 +686,15 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
       frameRate: frameRate == null && nullToAbsent
           ? const Value.absent()
           : Value(frameRate),
+      videoCodec: videoCodec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(videoCodec),
+      audioCodec: audioCodec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioCodec),
+      audioChannelCount: audioChannelCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioChannelCount),
       subtitleUri: subtitleUri == null && nullToAbsent
           ? const Value.absent()
           : Value(subtitleUri),
@@ -671,6 +740,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
       rotationDegrees: serializer.fromJson<int?>(json['rotationDegrees']),
       bitrate: serializer.fromJson<int?>(json['bitrate']),
       frameRate: serializer.fromJson<double?>(json['frameRate']),
+      videoCodec: serializer.fromJson<String?>(json['videoCodec']),
+      audioCodec: serializer.fromJson<String?>(json['audioCodec']),
+      audioChannelCount: serializer.fromJson<int?>(json['audioChannelCount']),
       subtitleUri: serializer.fromJson<String?>(json['subtitleUri']),
       createdAtMs: serializer.fromJson<int?>(json['createdAtMs']),
       modifiedAtMs: serializer.fromJson<int?>(json['modifiedAtMs']),
@@ -706,6 +778,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
       'rotationDegrees': serializer.toJson<int?>(rotationDegrees),
       'bitrate': serializer.toJson<int?>(bitrate),
       'frameRate': serializer.toJson<double?>(frameRate),
+      'videoCodec': serializer.toJson<String?>(videoCodec),
+      'audioCodec': serializer.toJson<String?>(audioCodec),
+      'audioChannelCount': serializer.toJson<int?>(audioChannelCount),
       'subtitleUri': serializer.toJson<String?>(subtitleUri),
       'createdAtMs': serializer.toJson<int?>(createdAtMs),
       'modifiedAtMs': serializer.toJson<int?>(modifiedAtMs),
@@ -738,6 +813,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
           Value<int?> rotationDegrees = const Value.absent(),
           Value<int?> bitrate = const Value.absent(),
           Value<double?> frameRate = const Value.absent(),
+          Value<String?> videoCodec = const Value.absent(),
+          Value<String?> audioCodec = const Value.absent(),
+          Value<int?> audioChannelCount = const Value.absent(),
           Value<String?> subtitleUri = const Value.absent(),
           Value<int?> createdAtMs = const Value.absent(),
           Value<int?> modifiedAtMs = const Value.absent(),
@@ -770,6 +848,11 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
             : this.rotationDegrees,
         bitrate: bitrate.present ? bitrate.value : this.bitrate,
         frameRate: frameRate.present ? frameRate.value : this.frameRate,
+        videoCodec: videoCodec.present ? videoCodec.value : this.videoCodec,
+        audioCodec: audioCodec.present ? audioCodec.value : this.audioCodec,
+        audioChannelCount: audioChannelCount.present
+            ? audioChannelCount.value
+            : this.audioChannelCount,
         subtitleUri: subtitleUri.present ? subtitleUri.value : this.subtitleUri,
         createdAtMs: createdAtMs.present ? createdAtMs.value : this.createdAtMs,
         modifiedAtMs:
@@ -814,6 +897,13 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
           : this.rotationDegrees,
       bitrate: data.bitrate.present ? data.bitrate.value : this.bitrate,
       frameRate: data.frameRate.present ? data.frameRate.value : this.frameRate,
+      videoCodec:
+          data.videoCodec.present ? data.videoCodec.value : this.videoCodec,
+      audioCodec:
+          data.audioCodec.present ? data.audioCodec.value : this.audioCodec,
+      audioChannelCount: data.audioChannelCount.present
+          ? data.audioChannelCount.value
+          : this.audioChannelCount,
       subtitleUri:
           data.subtitleUri.present ? data.subtitleUri.value : this.subtitleUri,
       createdAtMs:
@@ -863,6 +953,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
           ..write('rotationDegrees: $rotationDegrees, ')
           ..write('bitrate: $bitrate, ')
           ..write('frameRate: $frameRate, ')
+          ..write('videoCodec: $videoCodec, ')
+          ..write('audioCodec: $audioCodec, ')
+          ..write('audioChannelCount: $audioChannelCount, ')
           ..write('subtitleUri: $subtitleUri, ')
           ..write('createdAtMs: $createdAtMs, ')
           ..write('modifiedAtMs: $modifiedAtMs, ')
@@ -897,6 +990,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
         rotationDegrees,
         bitrate,
         frameRate,
+        videoCodec,
+        audioCodec,
+        audioChannelCount,
         subtitleUri,
         createdAtMs,
         modifiedAtMs,
@@ -930,6 +1026,9 @@ class VideoIndexEntry extends DataClass implements Insertable<VideoIndexEntry> {
           other.rotationDegrees == this.rotationDegrees &&
           other.bitrate == this.bitrate &&
           other.frameRate == this.frameRate &&
+          other.videoCodec == this.videoCodec &&
+          other.audioCodec == this.audioCodec &&
+          other.audioChannelCount == this.audioChannelCount &&
           other.subtitleUri == this.subtitleUri &&
           other.createdAtMs == this.createdAtMs &&
           other.modifiedAtMs == this.modifiedAtMs &&
@@ -961,6 +1060,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
   final Value<int?> rotationDegrees;
   final Value<int?> bitrate;
   final Value<double?> frameRate;
+  final Value<String?> videoCodec;
+  final Value<String?> audioCodec;
+  final Value<int?> audioChannelCount;
   final Value<String?> subtitleUri;
   final Value<int?> createdAtMs;
   final Value<int?> modifiedAtMs;
@@ -991,6 +1093,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
     this.rotationDegrees = const Value.absent(),
     this.bitrate = const Value.absent(),
     this.frameRate = const Value.absent(),
+    this.videoCodec = const Value.absent(),
+    this.audioCodec = const Value.absent(),
+    this.audioChannelCount = const Value.absent(),
     this.subtitleUri = const Value.absent(),
     this.createdAtMs = const Value.absent(),
     this.modifiedAtMs = const Value.absent(),
@@ -1022,6 +1127,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
     this.rotationDegrees = const Value.absent(),
     this.bitrate = const Value.absent(),
     this.frameRate = const Value.absent(),
+    this.videoCodec = const Value.absent(),
+    this.audioCodec = const Value.absent(),
+    this.audioChannelCount = const Value.absent(),
     this.subtitleUri = const Value.absent(),
     this.createdAtMs = const Value.absent(),
     this.modifiedAtMs = const Value.absent(),
@@ -1058,6 +1166,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
     Expression<int>? rotationDegrees,
     Expression<int>? bitrate,
     Expression<double>? frameRate,
+    Expression<String>? videoCodec,
+    Expression<String>? audioCodec,
+    Expression<int>? audioChannelCount,
     Expression<String>? subtitleUri,
     Expression<int>? createdAtMs,
     Expression<int>? modifiedAtMs,
@@ -1089,6 +1200,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
       if (rotationDegrees != null) 'rotation_degrees': rotationDegrees,
       if (bitrate != null) 'bitrate': bitrate,
       if (frameRate != null) 'frame_rate': frameRate,
+      if (videoCodec != null) 'video_codec': videoCodec,
+      if (audioCodec != null) 'audio_codec': audioCodec,
+      if (audioChannelCount != null) 'audio_channel_count': audioChannelCount,
       if (subtitleUri != null) 'subtitle_uri': subtitleUri,
       if (createdAtMs != null) 'created_at_ms': createdAtMs,
       if (modifiedAtMs != null) 'modified_at_ms': modifiedAtMs,
@@ -1123,6 +1237,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
       Value<int?>? rotationDegrees,
       Value<int?>? bitrate,
       Value<double?>? frameRate,
+      Value<String?>? videoCodec,
+      Value<String?>? audioCodec,
+      Value<int?>? audioChannelCount,
       Value<String?>? subtitleUri,
       Value<int?>? createdAtMs,
       Value<int?>? modifiedAtMs,
@@ -1153,6 +1270,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
       rotationDegrees: rotationDegrees ?? this.rotationDegrees,
       bitrate: bitrate ?? this.bitrate,
       frameRate: frameRate ?? this.frameRate,
+      videoCodec: videoCodec ?? this.videoCodec,
+      audioCodec: audioCodec ?? this.audioCodec,
+      audioChannelCount: audioChannelCount ?? this.audioChannelCount,
       subtitleUri: subtitleUri ?? this.subtitleUri,
       createdAtMs: createdAtMs ?? this.createdAtMs,
       modifiedAtMs: modifiedAtMs ?? this.modifiedAtMs,
@@ -1218,6 +1338,15 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
     if (frameRate.present) {
       map['frame_rate'] = Variable<double>(frameRate.value);
     }
+    if (videoCodec.present) {
+      map['video_codec'] = Variable<String>(videoCodec.value);
+    }
+    if (audioCodec.present) {
+      map['audio_codec'] = Variable<String>(audioCodec.value);
+    }
+    if (audioChannelCount.present) {
+      map['audio_channel_count'] = Variable<int>(audioChannelCount.value);
+    }
     if (subtitleUri.present) {
       map['subtitle_uri'] = Variable<String>(subtitleUri.value);
     }
@@ -1282,6 +1411,9 @@ class VideoIndexEntriesCompanion extends UpdateCompanion<VideoIndexEntry> {
           ..write('rotationDegrees: $rotationDegrees, ')
           ..write('bitrate: $bitrate, ')
           ..write('frameRate: $frameRate, ')
+          ..write('videoCodec: $videoCodec, ')
+          ..write('audioCodec: $audioCodec, ')
+          ..write('audioChannelCount: $audioChannelCount, ')
           ..write('subtitleUri: $subtitleUri, ')
           ..write('createdAtMs: $createdAtMs, ')
           ..write('modifiedAtMs: $modifiedAtMs, ')
@@ -1330,6 +1462,9 @@ typedef $$VideoIndexEntriesTableCreateCompanionBuilder
   Value<int?> rotationDegrees,
   Value<int?> bitrate,
   Value<double?> frameRate,
+  Value<String?> videoCodec,
+  Value<String?> audioCodec,
+  Value<int?> audioChannelCount,
   Value<String?> subtitleUri,
   Value<int?> createdAtMs,
   Value<int?> modifiedAtMs,
@@ -1362,6 +1497,9 @@ typedef $$VideoIndexEntriesTableUpdateCompanionBuilder
   Value<int?> rotationDegrees,
   Value<int?> bitrate,
   Value<double?> frameRate,
+  Value<String?> videoCodec,
+  Value<String?> audioCodec,
+  Value<int?> audioChannelCount,
   Value<String?> subtitleUri,
   Value<int?> createdAtMs,
   Value<int?> modifiedAtMs,
@@ -1432,6 +1570,16 @@ class $$VideoIndexEntriesTableFilterComposer
 
   ColumnFilters<double> get frameRate => $composableBuilder(
       column: $table.frameRate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get videoCodec => $composableBuilder(
+      column: $table.videoCodec, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get audioCodec => $composableBuilder(
+      column: $table.audioCodec, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get audioChannelCount => $composableBuilder(
+      column: $table.audioChannelCount,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get subtitleUri => $composableBuilder(
       column: $table.subtitleUri, builder: (column) => ColumnFilters(column));
@@ -1532,6 +1680,16 @@ class $$VideoIndexEntriesTableOrderingComposer
   ColumnOrderings<double> get frameRate => $composableBuilder(
       column: $table.frameRate, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get videoCodec => $composableBuilder(
+      column: $table.videoCodec, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get audioCodec => $composableBuilder(
+      column: $table.audioCodec, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get audioChannelCount => $composableBuilder(
+      column: $table.audioChannelCount,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get subtitleUri => $composableBuilder(
       column: $table.subtitleUri, builder: (column) => ColumnOrderings(column));
 
@@ -1631,6 +1789,15 @@ class $$VideoIndexEntriesTableAnnotationComposer
   GeneratedColumn<double> get frameRate =>
       $composableBuilder(column: $table.frameRate, builder: (column) => column);
 
+  GeneratedColumn<String> get videoCodec => $composableBuilder(
+      column: $table.videoCodec, builder: (column) => column);
+
+  GeneratedColumn<String> get audioCodec => $composableBuilder(
+      column: $table.audioCodec, builder: (column) => column);
+
+  GeneratedColumn<int> get audioChannelCount => $composableBuilder(
+      column: $table.audioChannelCount, builder: (column) => column);
+
   GeneratedColumn<String> get subtitleUri => $composableBuilder(
       column: $table.subtitleUri, builder: (column) => column);
 
@@ -1714,6 +1881,9 @@ class $$VideoIndexEntriesTableTableManager extends RootTableManager<
             Value<int?> rotationDegrees = const Value.absent(),
             Value<int?> bitrate = const Value.absent(),
             Value<double?> frameRate = const Value.absent(),
+            Value<String?> videoCodec = const Value.absent(),
+            Value<String?> audioCodec = const Value.absent(),
+            Value<int?> audioChannelCount = const Value.absent(),
             Value<String?> subtitleUri = const Value.absent(),
             Value<int?> createdAtMs = const Value.absent(),
             Value<int?> modifiedAtMs = const Value.absent(),
@@ -1745,6 +1915,9 @@ class $$VideoIndexEntriesTableTableManager extends RootTableManager<
             rotationDegrees: rotationDegrees,
             bitrate: bitrate,
             frameRate: frameRate,
+            videoCodec: videoCodec,
+            audioCodec: audioCodec,
+            audioChannelCount: audioChannelCount,
             subtitleUri: subtitleUri,
             createdAtMs: createdAtMs,
             modifiedAtMs: modifiedAtMs,
@@ -1776,6 +1949,9 @@ class $$VideoIndexEntriesTableTableManager extends RootTableManager<
             Value<int?> rotationDegrees = const Value.absent(),
             Value<int?> bitrate = const Value.absent(),
             Value<double?> frameRate = const Value.absent(),
+            Value<String?> videoCodec = const Value.absent(),
+            Value<String?> audioCodec = const Value.absent(),
+            Value<int?> audioChannelCount = const Value.absent(),
             Value<String?> subtitleUri = const Value.absent(),
             Value<int?> createdAtMs = const Value.absent(),
             Value<int?> modifiedAtMs = const Value.absent(),
@@ -1807,6 +1983,9 @@ class $$VideoIndexEntriesTableTableManager extends RootTableManager<
             rotationDegrees: rotationDegrees,
             bitrate: bitrate,
             frameRate: frameRate,
+            videoCodec: videoCodec,
+            audioCodec: audioCodec,
+            audioChannelCount: audioChannelCount,
             subtitleUri: subtitleUri,
             createdAtMs: createdAtMs,
             modifiedAtMs: modifiedAtMs,

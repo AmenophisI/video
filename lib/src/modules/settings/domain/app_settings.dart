@@ -1,6 +1,7 @@
 enum LibraryViewMode {
-  grid,
   list,
+  grid,
+  enlarged,
 }
 
 enum PrivateLockMethod {
@@ -21,21 +22,33 @@ extension PrivateLockMethodX on PrivateLockMethod {
 
 class AppSettings {
   const AppSettings({
-    this.viewMode = LibraryViewMode.grid,
+    this.viewMode = LibraryViewMode.list,
+    this.lastTabIndex = 0,
     this.rememberPlaybackPosition = true,
     this.showPlaybackProgress = true,
     this.showVideoTags = true,
-    this.enableInstantPlayer = true,
+    this.enableInstantPlayer = false,
+    this.autoPlayNext = false,
+    this.autoRepeat = false,
+    this.backgroundPlayback = false,
+    this.showSpeedController = true,
+    this.videoBrightness = 0.5,
     this.thumbnailCacheLimitMb = 512,
     this.privatePin,
     this.privateLockMethod = PrivateLockMethod.pinOrDeviceCredential,
   });
 
   final LibraryViewMode viewMode;
+  final int lastTabIndex;
   final bool rememberPlaybackPosition;
   final bool showPlaybackProgress;
   final bool showVideoTags;
   final bool enableInstantPlayer;
+  final bool autoPlayNext;
+  final bool autoRepeat;
+  final bool backgroundPlayback;
+  final bool showSpeedController;
+  final double videoBrightness;
   final int thumbnailCacheLimitMb;
   final String? privatePin;
   final PrivateLockMethod privateLockMethod;
@@ -48,10 +61,16 @@ class AppSettings {
 
   AppSettings copyWith({
     LibraryViewMode? viewMode,
+    int? lastTabIndex,
     bool? rememberPlaybackPosition,
     bool? showPlaybackProgress,
     bool? showVideoTags,
     bool? enableInstantPlayer,
+    bool? autoPlayNext,
+    bool? autoRepeat,
+    bool? backgroundPlayback,
+    bool? showSpeedController,
+    double? videoBrightness,
     int? thumbnailCacheLimitMb,
     String? privatePin,
     PrivateLockMethod? privateLockMethod,
@@ -59,11 +78,17 @@ class AppSettings {
   }) {
     return AppSettings(
       viewMode: viewMode ?? this.viewMode,
+      lastTabIndex: lastTabIndex ?? this.lastTabIndex,
       rememberPlaybackPosition:
           rememberPlaybackPosition ?? this.rememberPlaybackPosition,
       showPlaybackProgress: showPlaybackProgress ?? this.showPlaybackProgress,
       showVideoTags: showVideoTags ?? this.showVideoTags,
       enableInstantPlayer: enableInstantPlayer ?? this.enableInstantPlayer,
+      autoPlayNext: autoPlayNext ?? this.autoPlayNext,
+      autoRepeat: autoRepeat ?? this.autoRepeat,
+      backgroundPlayback: backgroundPlayback ?? this.backgroundPlayback,
+      showSpeedController: showSpeedController ?? this.showSpeedController,
+      videoBrightness: videoBrightness ?? this.videoBrightness,
       thumbnailCacheLimitMb:
           thumbnailCacheLimitMb ?? this.thumbnailCacheLimitMb,
       privatePin: clearPrivatePin ? null : privatePin ?? this.privatePin,

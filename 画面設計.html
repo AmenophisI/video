@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動画ライブラリアプリ 画面設計書</title>
+    <style>
+        :root{
+          /* One UI color tokens */
+          /* One UI ダークモード トークン */
+          --bg:#000000; --surface:#000000; --sc:#1C1D20; --sc-high:#2B2C30;
+          --on:#F4F5F6; --on-var:#A9ADB3; --on-faint:#73767D;
+          --accent:#4D90FE; --accent-c:#16324F; --on-accent:#FFFFFF; --divider:#2A2B2E;
+          /* doc palette */
+          --doc-bg:#F4F5F7; --doc-panel:#FFFFFF; --doc-ink:#1f2430; --doc-ink2:#5b6472; --doc-line:#E2E5EA;
+          --doc-accent:#1B72E8; --doc-accent-soft:#EAF2FE; --code-bg:#F3F4F6;
+          --r:14px; --font:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        }
+        *{box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{margin:0;font-family:var(--font);color:var(--doc-ink);background:var(--doc-bg);line-height:1.7;-webkit-font-smoothing:antialiased;font-size:14px}
+        .ic{width:24px;height:24px;display:inline-block;flex:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+
+        /* ---------- layout ---------- */
+        .wrap{display:flex;align-items:flex-start}
+        .toc{position:sticky;top:0;align-self:flex-start;width:248px;height:100vh;overflow-y:auto;background:#0f1422;color:#c7cdd9;padding:22px 16px 60px;flex:none}
+        .toc h1{font-size:14px;color:#fff;margin:0 0 4px;letter-spacing:.02em}
+        .toc .sub{font-size:11px;color:#7e8699;margin-bottom:18px}
+        .toc a{display:block;color:#aeb6c6;text-decoration:none;font-size:12.5px;padding:5px 10px;border-radius:8px;margin:1px 0;border-left:2px solid transparent}
+        .toc a:hover{background:#1b2336;color:#fff}
+        .toc a.grp{margin-top:14px;color:#fff;font-weight:600;font-size:12px;letter-spacing:.03em;pointer-events:none;padding-left:10px}
+        .toc a.sub2{padding-left:22px;font-size:12px;color:#8c94a6}
+        .doc{flex:1;min-width:0;max-width:1100px;margin:0 auto;padding:0 40px 120px}
+
+        /* ---------- cover ---------- */
+        .cover{background:linear-gradient(135deg,#0f1d3a,#1b72e8);color:#fff;border-radius:0 0 24px 24px;padding:54px 48px 44px;margin:0 -40px 40px;box-shadow:0 14px 40px rgba(27,114,232,.18)}
+        .cover .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.8}
+        .cover h1{font-size:34px;margin:8px 0 6px;font-weight:800;letter-spacing:.01em}
+        .cover .tagline{font-size:15px;opacity:.92;margin-bottom:22px}
+        .cover .meta{display:flex;flex-wrap:wrap;gap:10px 26px;font-size:13px}
+        .cover .meta b{display:block;font-size:11px;opacity:.7;font-weight:500;letter-spacing:.04em;margin-bottom:1px}
+        .cover .meta span{font-weight:600}
+
+        /* ---------- doc typography ---------- */
+        section{margin:0 0 12px;scroll-margin-top:16px}
+        h2{font-size:23px;font-weight:800;margin:46px 0 4px;padding-top:14px;color:#10182a;display:flex;align-items:center;gap:10px}
+        h2 .no{background:var(--doc-accent);color:#fff;font-size:13px;font-weight:700;border-radius:8px;padding:2px 10px;letter-spacing:.02em}
+        h3{font-size:18px;font-weight:700;margin:30px 0 8px;color:#16213a;border-left:4px solid var(--doc-accent);padding-left:12px}
+        h4{font-size:14px;font-weight:700;margin:18px 0 6px;color:var(--doc-ink2)}
+        p{margin:8px 0}
+        .lead{color:var(--doc-ink2);font-size:14px}
+        a.x{color:var(--doc-accent);text-decoration:none;border-bottom:1px dashed #b9d2f7}
+        a.x:hover{border-bottom-style:solid}
+        code,.kbd{background:var(--code-bg);border:1px solid var(--doc-line);border-radius:6px;padding:1px 6px;font-family:"SFMono-Regular",Consolas,"Roboto Mono",monospace;font-size:12.5px;color:#2b3a55}
+        .msg{color:#1f6f3e;background:#eafaf0;border:1px solid #bfe8cd;border-radius:6px;padding:1px 7px;font-size:12.5px;white-space:nowrap}
+        .note{background:var(--doc-accent-soft);border:1px solid #cfe2fb;border-radius:12px;padding:12px 16px;font-size:13px;color:#234}
+        .legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+        .pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--doc-line);border-radius:999px;padding:4px 12px;font-size:12px;color:var(--doc-ink2);font-weight:600}
+        .pill .dot{width:9px;height:9px;border-radius:50%}
+
+        /* ---------- tables ---------- */
+        table.spec{width:100%;border-collapse:collapse;margin:12px 0 8px;font-size:13px;background:#fff;border:1px solid var(--doc-line);border-radius:12px;overflow:hidden}
+        table.spec th,table.spec td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--doc-line);vertical-align:top}
+        table.spec thead th{background:#f0f3f8;color:#33405a;font-weight:700;font-size:12px;letter-spacing:.02em}
+        table.spec tbody tr:last-child td{border-bottom:none}
+        table.spec tbody tr:nth-child(even){background:#fafbfd}
+        table.spec td.k{font-weight:600;color:#22324f;white-space:nowrap}
+        table.spec td .src{color:var(--doc-accent);font-family:monospace;font-size:11.5px}
+        .tbl-wide td:first-child{width:30%}
+
+        /* ---------- screen showcase ---------- */
+        .screens{display:flex;flex-wrap:wrap;gap:26px;margin:16px 0 6px;align-items:flex-start}
+        .screen{flex:none}
+        .screen-cap{font-size:12px;color:var(--doc-ink2);text-align:center;margin-top:8px;font-weight:600}
+        .screen-cap b{color:var(--doc-accent)}
+
+        /* ============ One UI phone mockup ============ */
+        .phone{width:300px;background:var(--bg);border-radius:30px;border:1px solid #d7dbe2;box-shadow:0 18px 50px rgba(20,30,55,.16);overflow:hidden;position:relative;font-size:13px;color:var(--on);line-height:1.45}
+        .phone.h{height:650px}
+        .phone .scroll{position:absolute;inset:0;overflow:hidden;display:flex;flex-direction:column}
+        .phone.flow{display:flex;flex-direction:column}
+
+        /* status bar */
+        .statusbar{display:flex;align-items:center;justify-content:space-between;padding:9px 18px 5px;font-size:11px;font-weight:600;color:var(--on)}
+        .sb-r{display:flex;align-items:center;gap:5px}
+        .sb-r svg{display:block}
+
+        /* toolbar */
+        .toolbar{display:flex;align-items:center;gap:2px;padding:6px 6px;min-height:42px}
+        .toolbar.lead{padding-left:6px}
+        .toolbar .sp{flex:1}
+        .iconbtn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:var(--on);border-radius:50%}
+        .iconbtn .ic{width:21px;height:21px}
+        .iconbtn.muted{color:var(--on-var)}
+
+        /* large title */
+        .appbar-large{padding:2px 19px 11px}
+        .appbar-large .t{font-size:23px;font-weight:800;letter-spacing:.01em;line-height:1.15}
+        .appbar-large .c{font-size:11.5px;color:var(--on-var);margin-top:3px}
+
+        /* pill search */
+        .pill-search{margin:0 13px 8px;display:flex;align-items:center;gap:10px;background:var(--sc);border-radius:22px;padding:11px 15px;color:var(--on-var)}
+        .pill-search .ic{width:18px;height:18px}
+        .pill-search span{font-size:12.5px}
+
+        /* sort row */
+        .sortrow{display:flex;align-items:center;padding:3px 12px 7px 18px}
+        .sortrow .sl{flex:1;display:flex;align-items:center;gap:3px;color:var(--on-var);font-size:12px;font-weight:600}
+        .sortrow .sl .ic{width:15px;height:15px}
+        .sortrow .iconbtn{width:34px;height:34px}
+        .sortrow .iconbtn .ic{width:19px;height:19px}
+        .accent{color:var(--accent)}
+
+        /* bottom nav */
+        .bottomnav{position:absolute;left:0;right:0;bottom:0;display:flex;background:var(--bg);border-top:1px solid var(--divider);padding:7px 0 8px}
+        .phone.flow .bottomnav{position:static}
+        .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--on-var);font-size:9.5px;font-weight:500}
+        .nav-item .ic{width:22px;height:22px}
+        .nav-item.on{color:var(--accent);font-weight:700}
+
+        /* date header */
+        .date-h{padding:8px 10px 3px;font-size:12px;font-weight:700;color:var(--on)}
+        .date-h.gap{padding-top:14px}
+
+        /* grid */
+        .body{flex:1;overflow:hidden}
+        .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:2px 14px 12px}
+        .vtile .thumb{position:relative;border-radius:14px;height:74px;overflow:hidden}
+        .vtile .meta-t{font-size:11.5px;font-weight:600;margin:7px 2px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .vtile .meta-s{font-size:10px;color:var(--on-var);margin:0 2px}
+        .thumb .dur{position:absolute;right:7px;bottom:7px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;font-weight:600;border-radius:5px;padding:1px 5px}
+        .thumb .prog{position:absolute;left:7px;right:7px;bottom:6px;height:3px;border-radius:2px;background:rgba(255,255,255,.4)}
+        .thumb .prog i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+        .thumb .pc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;opacity:.92}
+        .thumb .pc .ic{width:28px;height:28px}
+        /* 簡易再生（プレビュー）ボタン: 動画タイル/行のサムネ左上 */
+        .vtile .pc{display:none}
+        .vrow .thumb{position:relative}
+        .vtile .thumb::before,.vrow .thumb::before{content:"";position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.45);z-index:2}
+        .vtile .thumb::after,.vrow .thumb::after{content:"";position:absolute;left:13px;top:12px;width:0;height:0;border-style:solid;border-width:5px 0 5px 8px;border-color:transparent transparent transparent #fff;z-index:2}
+
+        /* list */
+        .vlist{padding:2px 12px 10px;display:flex;flex-direction:column;gap:3px}
+        .vrow{display:flex;align-items:center;gap:12px;padding:7px 4px 7px 6px}
+        .vrow .thumb{height:67px;width:118px;flex:none}
+        .thumb .dur.sm{font-size:8.5px;right:6px;bottom:6px}
+        .vrow .vb{flex:1;min-width:0}
+        .vrow .vb .t{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .vrow .vb .s{font-size:10.5px;color:var(--on-var)}
+        .vrow .vb .tags{display:flex;gap:5px;margin-top:4px}
+        .vrow .vb .tags em{font-style:normal;background:var(--sc);color:var(--on-var);font-size:9px;font-weight:600;border-radius:5px;padding:1px 6px}
+        .vrow .kebab{color:var(--on-faint)}
+        .vrow .kebab .ic{width:18px;height:18px}
+
+        /* folder grid/list */
+        .folder-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:2px 14px 12px}
+        .folder-card .thumb{height:84px;border-radius:16px;position:relative;display:flex;align-items:center;justify-content:center}
+        .folder-card .thumb .ic{width:26px;height:26px;color:var(--on-faint)}
+        .folder-card .n{font-size:12.5px;font-weight:600;margin:7px 2px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .folder-card .c{font-size:10.5px;color:var(--on-var);margin:0 2px}
+        .folder-row{display:flex;align-items:center;gap:13px;padding:9px 6px}
+        .folder-row .ft{width:60px;height:42px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center}
+        .folder-row .ft .ic{width:22px;height:22px;color:var(--on-faint)}
+        .folder-row .fb{flex:1;min-width:0}
+        .folder-row .fb .n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .folder-row .fb .s{font-size:11px;color:var(--on-var)}
+        .folder-row .kebab{color:var(--on-faint)}.folder-row .kebab .ic{width:18px;height:18px}
+
+        /* playlist rows */
+        .pl-row{display:flex;align-items:center;gap:13px;padding:9px 10px}
+        .pl-row .pt{width:48px;height:48px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+        .pl-row .pt .ic{width:22px;height:22px}
+        .pl-row .pb{flex:1;min-width:0}
+        .pl-row .pb .n{font-size:14px;font-weight:600}
+        .pl-row .pb .s{font-size:11.5px;color:var(--on-var)}
+        .pl-row .ch{color:var(--on-faint)}.pl-row .ch .ic{width:20px;height:20px}
+
+        /* detail */
+        .detail{padding:4px 16px 18px}
+        .detail-hero{height:170px;border-radius:20px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+        .detail-hero .fab{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;color:var(--accent)}
+        .detail-hero .fab .ic{width:28px;height:28px}
+        .detail-title{font-size:19px;font-weight:800;line-height:1.25}
+        .detail-meta{font-size:11.5px;color:var(--on-var);margin:4px 0 9px}
+        .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:13px}
+        .chip{background:var(--sc);color:var(--on-var);font-size:11px;font-weight:600;border-radius:8px;padding:4px 9px}
+        .btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:12px;font-size:14px;font-weight:700}
+        .btn .ic{width:19px;height:19px}
+        .btn.filled{background:var(--accent);color:#fff}
+        .qa-row{display:flex;justify-content:space-between;margin:13px 2px 4px}
+        .qa{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;color:var(--on-var)}
+        .qa .c{width:46px;height:46px;border-radius:50%;background:var(--sc);display:flex;align-items:center;justify-content:center;color:var(--on)}
+        .qa .c .ic{width:20px;height:20px}
+        .info-card{background:var(--sc);border-radius:18px;overflow:hidden;margin-top:14px}
+        .info-row{display:flex;justify-content:space-between;gap:12px;padding:11px 15px;border-bottom:1px solid var(--divider);font-size:12.5px}
+        .info-row:last-child{border-bottom:none}
+        .info-row .l{color:var(--on)}
+        .info-row .v{color:var(--on-var);text-align:right}
+        .del-btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:12px;font-size:13px;font-weight:700;color:#DC362E;background:var(--sc);margin-top:14px}
+        .del-btn .ic{width:18px;height:18px}
+
+        /* settings */
+        .set-wrap{padding:0 16px 16px;display:flex;flex-direction:column;gap:18px}
+        .set-section{font-size:12px;font-weight:700;color:var(--accent);padding:2px 0 0 10px}
+        .set-group{background:var(--sc);border-radius:18px;overflow:hidden;margin-top:6px}
+        .set-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--divider)}
+        .set-group .set-row:last-child{border-bottom:none}
+        .set-row .st{flex:1;min-width:0}
+        .set-row .st .a{font-size:14px;font-weight:500}
+        .set-row .st .b{font-size:11.5px;color:var(--on-var);margin-top:1px}
+        .set-row .val{color:var(--on-var);font-size:12.5px;display:flex;align-items:center;gap:5px}
+        .set-row .val .ic{width:18px;height:18px;color:var(--on-faint)}
+        .set-row .ch .ic{width:18px;height:18px;color:var(--on-faint)}
+        .toggle{width:44px;height:26px;border-radius:13px;background:var(--sc-high);position:relative;flex:none}
+        .toggle i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+        .toggle.on{background:var(--accent)}.toggle.on i{left:21px}
+
+        /* player */
+        .player{background:#000;height:650px;position:relative;color:#fff;overflow:hidden}
+        .player .video{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:169px}
+        .player .ov{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,.12) 50%,rgba(0,0,0,.66))}
+        .player .ptop{position:absolute;top:40px;left:8px;right:8px;display:flex;align-items:center;gap:2px}
+        .player .ptop .ttl{flex:1;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .player .iconbtn{color:#fff}
+        .player .center{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;gap:16px}
+        .tcircle{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:#fff}
+        .tcircle .ic{width:21px;height:21px}
+        .pcircle{width:62px;height:62px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff}
+        .pcircle .ic{width:30px;height:30px}
+        .player .seek{position:absolute;left:16px;right:16px;bottom:54px;display:flex;align-items:center;gap:10px;font-size:11px;font-weight:600}
+        .player .track{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.3);position:relative}
+        .player .track i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+        .player .track b{position:absolute;top:-5px;width:14px;height:14px;border-radius:50%;background:var(--accent)}
+        .player .ptools{position:absolute;left:16px;right:16px;bottom:14px;display:flex;justify-content:space-between}
+        .ptool{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+        .ptool .ic{width:18px;height:18px}
+
+        /* bottom sheet */
+        .sheet-screen{position:relative;height:650px;overflow:hidden}
+        .sheet-screen .dim{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+        .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:28px 28px 0 0;padding:12px 16px 26px;box-shadow:0 -6px 26px rgba(0,0,0,.25)}
+        .sheet .handle{width:34px;height:5px;border-radius:3px;background:var(--on-faint);margin:0 auto 12px}
+        .sheet .video{height:158px;border-radius:16px;position:relative;display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:11px}
+        .sheet .video .ic{width:42px;height:42px;opacity:.92}
+        .sheet .st{font-size:15px;font-weight:700}
+        .sheet .ss{font-size:11.5px;color:var(--on-var);margin-bottom:11px}
+        .sheet .ctrls{display:flex;justify-content:center;align-items:center;gap:13px}
+        .sheet .ctrls .tcircle{background:var(--sc);color:var(--on);width:46px;height:46px}
+        .sheet .ctrls .pcircle{width:54px;height:54px}
+
+        /* gradients (match Figma thumbnails) */
+        .g1{background:linear-gradient(135deg,#0F766E,#0B3B38)}
+        .g2{background:linear-gradient(135deg,#7C3AED,#4C1D95)}
+        .g3{background:linear-gradient(135deg,#DB2777,#831843)}
+        .g4{background:linear-gradient(135deg,#2563EB,#1E3A8A)}
+        .g5{background:linear-gradient(135deg,#EA580C,#7C2D12)}
+        .g6{background:linear-gradient(135deg,#0891B2,#164E63)}
+        .gfolder{background:var(--sc)}
+
+        /* mermaid */
+        .mermaid{background:#fff;border:1px solid var(--doc-line);border-radius:14px;padding:18px;margin:14px 0;overflow-x:auto;text-align:center}
+
+        @media print{
+          .toc{display:none}
+          body{background:#fff}
+          .doc{max-width:none;padding:0 8mm}
+          .cover{margin:0 0 16px;border-radius:12px;box-shadow:none}
+          .phone{box-shadow:none}
+          section,h2,h3,.screens,table.spec{break-inside:avoid}
+        }
+        @media (max-width:900px){
+          .toc{display:none}
+          .doc{padding:0 16px 80px}
+          .cover{margin:0 -16px 24px}
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============ ICON SPRITE ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="ic-more" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-add" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="ic-back" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></symbol>
+    <symbol id="ic-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="ic-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="ic-video" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/></symbol>
+    <symbol id="ic-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h13"/><path d="M3 12h13"/><path d="M3 18h8"/><path d="M16 13v8l6-4z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1l-.4-2.5H9.1l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.3 7.3 0 0 0 1.7 1l.4 2.5h3.8l.4-2.5a7.3 7.3 0 0 0 1.7-1l2.4 1 2-3.4z"/></symbol>
+    <symbol id="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-play-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5-3.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-prev" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 5v14l-9-7z" fill="currentColor" stroke="none"/><rect x="5" y="5" width="2.6" height="14" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-next" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 5v14l9-7z" fill="currentColor" stroke="none"/><rect x="16.4" y="5" width="2.6" height="14" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-replay10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 20a8 8 0 1 0-8-8"/><path d="M3 8v4h4"/></symbol>
+    <symbol id="ic-forward10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M13 20a8 8 0 1 1 8-8"/><path d="M21 8v4h-4"/></symbol>
+    <symbol id="ic-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+    <symbol id="ic-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 10a2.5 2.5 0 0 0-4 2 2.5 2.5 0 0 0 4 2"/><path d="M17 10a2.5 2.5 0 0 0-4 2 2.5 2.5 0 0 0 4 2"/></symbol>
+    <symbol id="ic-fullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="ic-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 4 8 12l8 8 8-8z"/><path d="M4.5 9A9 9 0 0 1 12 3.2"/><path d="M19.5 15A9 9 0 0 1 12 20.8"/></symbol>
+    <symbol id="ic-fit" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 10v4"/><path d="M16 10v4"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="ic-star" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 18.2 6.6 20l1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+    <symbol id="ic-share" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15V3"/><path d="m8 7 4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></symbol>
+    <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="ic-move" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 13h6"/><path d="m13 11 2 2-2 2"/></symbol>
+    <symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="ic-pladd" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h12"/><path d="M3 12h8"/><path d="M3 18h8"/><path d="M16 13v8"/><path d="M12 17h8"/></symbol>
+    <symbol id="ic-delete" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-viewlist" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4.5" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-north" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></symbol>
+    <symbol id="ic-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="m8.3 12 2.6 2.6 4.8-5.2"/></symbol>
+    <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></symbol>
+    <symbol id="ic-history" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></symbol>
+    <symbol id="ic-verified" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3 5 6v5c0 4 3 7 7 9 4-2 7-5 7-9V6z"/><path d="m9 11.5 2 2 4-4"/></symbol>
+    <symbol id="ic-error" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><circle cx="12" cy="16.3" r="0.9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9.9 5.2A9.7 9.7 0 0 1 12 5c5 0 9 5.5 9 7a13 13 0 0 1-2.3 2.9"/><path d="M6.5 6.6A12.4 12.4 0 0 0 3 12c0 1.5 4 7 9 7a9.4 9.4 0 0 0 3.8-.8"/><path d="m3 3 18 18"/></symbol>
+    <symbol id="ic-open" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 3h7v7"/><path d="M21 3 10 14"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></symbol>
+</svg>
+
+<!-- status bar right cluster reusable -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="sb-r" viewBox="0 0 74 16"><rect x="0" y="9" width="3" height="5" rx="1" fill="currentColor"/><rect x="5" y="6" width="3" height="8" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="11" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="14" rx="1" fill="currentColor"/><path d="M24 6.5a8 8 0 0 1 11 0" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M27 9.5a4 4 0 0 1 5 0" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="29.5" cy="12.5" r="1.4" fill="currentColor"/><rect x="48" y="2" width="22" height="11" rx="3" stroke="currentColor" stroke-width="1.4" fill="none"/><rect x="50" y="4" width="14" height="7" rx="1.2" fill="currentColor"/><rect x="71" y="5" width="2" height="5" rx="1" fill="currentColor"/></symbol></svg>
+
+<div class="wrap">
+    <aside class="toc">
+        <h1>画面設計書</h1>
+        <div class="sub">動画ライブラリアプリ</div>
+        <a href="#overview" class="grp">1. 概要</a>
+        <a href="#list" class="grp">2. 画面一覧</a>
+        <a href="#flow" class="grp">3. 画面遷移図</a>
+        <a href="#common" class="grp">4. 共通仕様</a>
+        <a href="#screens" class="grp">5. 各画面詳細</a>
+        <a href="#sc-library" class="sub2">5.1 動画ライブラリ</a>
+        <a href="#sc-folder" class="sub2">5.2 フォルダ</a>
+        <a href="#sc-playlist" class="sub2">5.3 プレイリスト</a>
+        <a href="#sc-folder-videos" class="sub2">5.4 フォルダ内動画</a>
+        <a href="#sc-detail" class="sub2">5.5 動画詳細</a>
+        <a href="#sc-player" class="sub2">5.6 全画面プレイヤー</a>
+        <a href="#sc-preview" class="sub2">5.7 簡易プレビュー</a>
+        <a href="#sc-settings" class="sub2">5.8 設定</a>
+        <a href="#dialogs" class="grp">6. ダイアログ仕様</a>
+        <a href="#data" class="grp">7. 画面で扱う情報</a>
+        <a href="#validation" class="grp">8. 入力規則</a>
+        <a href="#messages" class="grp">9. フィードバック文言</a>
+        <a href="#appendix" class="grp">付録. 非機能・権限</a>
+    </aside>
+
+    <main class="doc">
+        <header class="cover">
+            <div class="eyebrow">SCREEN DESIGN SPECIFICATION</div>
+            <h1>動画ライブラリアプリ 画面設計書</h1>
+            <div class="tagline">端末内の動画を一覧・検索・整理・再生する Android 向け動画ライブラリアプリ</div>
+            <div class="meta">
+                <div><b>対象アプリ</b><span>video（github.com/AmenophisI/video）</span></div>
+                <div><b>デザイン基準</b><span>One UI ダークモード（to-be 仕様）</span></div>
+                <div><b>版 / 作成日</b><span>v1.0 / 2026-06-15</span></div>
+                <div><b>出典</b><span>Figmaデザイン ＋ アプリの挙動</span></div>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2><span class="no">1</span> 概要</h2>
+            <p class="lead">本書は、端末内の動画ファイルを動画専用ライブラリとして一覧・検索・整理・再生する Android アプリの画面仕様を定義する。各画面の画面イメージは検討中の <b>One UI ダークモードのデザイン</b> を HTML/CSS で再現したもので、表示項目・操作・遷移・状態などの仕様は <b>アプリの実挙動</b> に基づく。</p>
+            <table class="spec tbl-wide">
+                <tbody>
+                <tr><td class="k">対象プラットフォーム</td><td>Android スマートフォン／タブレット</td></tr>
+                <tr><td class="k">動画の検出</td><td>端末内に保存された動画を自動的に検出し、動画専用のライブラリとして表示する（ユーザーによる手動登録は不要）。</td></tr>
+                <tr><td class="k">テーマ / アクセント</td><td>One UI ダークモード（黒基調）。アクセントは Samsung ブルー <code>#4D90FE</code>（選択状態・進捗・主要ボタンに限定使用）。モード切替は持たずダーク固定。</td></tr>
+                <tr><td class="k">ナビゲーション</td><td>ボトムナビゲーション4タブ（動画／フォルダ／リスト／設定）＋ プッシュ遷移（詳細・プレイヤー・フォルダ内・プレイリスト内）</td></tr>
+                <tr><td class="k">プライバシー</td><td>動画の情報は端末内でのみ扱う。共有を実行したときだけ、選択した外部アプリへ一時的にアクセスを許可する。</td></tr>
+                </tbody>
+            </table>
+            <h4>凡例</h4>
+            <div class="legend">
+                <span class="pill"><span class="dot" style="background:#1B72E8"></span>タブ画面（ボトムナビ）</span>
+                <span class="pill"><span class="dot" style="background:#7C3AED"></span>プッシュ画面（戻る）</span>
+                <span class="pill"><span class="dot" style="background:#0891B2"></span>ボトムシート</span>
+                <span class="pill"><span class="dot" style="background:#6C7177"></span>ダイアログ</span>
+                <span class="pill"><span class="msg" style="white-space:normal">緑</span> 成功トースト文言</span>
+            </div>
+        </section>
+
+        <section id="list">
+            <h2><span class="no">2</span> 画面一覧</h2>
+            <p class="lead">実装済みの画面と、要件定義書（9章）の画面ID（SC-）の対応を示す。表示切替欄はグリッド／リスト両対応の画面を表す。</p>
+            <table class="spec">
+                <thead><tr><th>画面ID</th><th>SC-ID</th><th>画面名</th><th>種別</th><th>概要</th><th>表示切替</th></tr></thead>
+                <tbody>
+                <tr><td class="k">SCR-01</td><td>SC-003</td><td>動画ライブラリ</td><td>タブ</td><td>すべての動画を一覧表示するメイン画面。検索・並び替え・複数選択操作。</td><td>グリッド／リスト</td></tr>
+                <tr><td class="k">SCR-02</td><td>SC-004</td><td>フォルダ</td><td>タブ</td><td>保存フォルダ単位で動画を一覧。フォルダの名称変更・削除。</td><td>グリッド／リスト</td></tr>
+                <tr><td class="k">SCR-03</td><td>—</td><td>プレイリスト</td><td>タブ</td><td>ユーザー作成のプレイリストを一覧。作成・名称変更・削除。</td><td>—</td></tr>
+                <tr><td class="k">SCR-04</td><td>SC-005</td><td>フォルダ内動画</td><td>プッシュ</td><td>選択フォルダ内の動画を一覧。</td><td>グリッド／リスト</td></tr>
+                <tr><td class="k">SCR-05</td><td>SC-007</td><td>動画詳細</td><td>プッシュ</td><td>動画のメタ情報表示と各種操作（再生・共有・移動・コピー・名称変更・リスト追加・削除）。</td><td>—</td></tr>
+                <tr><td class="k">SCR-06</td><td>SC-009</td><td>全画面プレイヤー</td><td>プッシュ</td><td>動画を全画面再生。シーク・前後送り・音量・画面回転・再生位置保存。</td><td>—</td></tr>
+                <tr><td class="k">SCR-07</td><td>SC-008</td><td>簡易プレビュー</td><td>シート</td><td>一覧上から動画を簡易再生するボトムシート。</td><td>—</td></tr>
+                <tr><td class="k">SCR-08</td><td>SC-017</td><td>設定</td><td>タブ</td><td>権限の確認・アプリ情報。</td><td>—</td></tr>
+                <tr><td class="k">SCR-03b</td><td>—</td><td>プレイリスト内動画</td><td>プッシュ</td><td>プレイリスト内の動画を並べ替え・削除・連続再生。</td><td>—</td></tr>
+                </tbody>
+            </table>
+            <p class="lead">付随するダイアログ・シート（SC-010〜014, SC-016 相当）は <a href="#dialogs" class="x">6. ダイアログ仕様</a> に集約。</p>
+        </section>
+
+        <section id="flow">
+            <h2><span class="no">3</span> 画面遷移図</h2>
+            <p class="lead">主要画面間の遷移とトリガーを示す。4つのタブはボトムナビゲーションで相互に行き来でき、各画面からプッシュ／ボトムシート／ダイアログへ遷移する。配色はプロジェクトの Mermaid 仕様ルールに準拠。</p>
+            <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#E8F1FF','primaryTextColor':'#444444','primaryBorderColor':'#4A90E2','lineColor':'#555555','secondaryColor':'#E9F7EC','tertiaryColor':'#fff','background':'#FFFFFF','mainBkg':'#fff','secondBkg':'#E8F1FF','tertiaryBkg':'#E9F7EC','border1':'#4A90E2','border2':'#CCCCCC','fontSize':'15px','fontFamily':'Segoe UI, Helvetica, Noto Sans','clusterBkg':'#FFFFFF','clusterBorder':'#CCCCCC'}}}%%
+flowchart TD
+  subgraph NAV["ボトムナビゲーション（4タブ・タップ／左右スワイプで相互遷移）"]
+    direction LR
+    LIB["動画ライブラリ"]:::tab
+    FLD["フォルダ"]:::tab
+    PL["プレイリスト"]:::tab
+    SET["設定"]:::tab
+  end
+  LIB <-. タップ / 横スワイプ .-> FLD
+  FLD <-. タップ / 横スワイプ .-> PL
+  PL <-. タップ / 横スワイプ .-> SET
+
+  LIB -->|動画タップ| PLAYER["全画面プレイヤー"]:::push
+  LIB -->|長押し/詳細| DETAIL["動画詳細"]:::push
+  LIB -->|簡易再生| PREVIEW["簡易プレビュー"]:::sheet
+  LIB -->|移動/コピー/削除| LOPS["移動コピー先選択 / 削除確認"]:::dialog
+
+  FLD -->|フォルダタップ| FVID["フォルダ内動画"]:::push
+  FLD -->|作成/名称変更/削除| FOPS["フォルダ操作ダイアログ"]:::dialog
+  FVID -->|動画タップ| PLAYER
+  FVID -->|長押し| DETAIL
+
+  PL -->|プレイリストタップ| PVID["プレイリスト内動画"]:::push
+  PL -->|作成/名称変更| POPS["プレイリスト操作ダイアログ"]:::dialog
+  PVID -->|タップ/先頭から再生| PLAYER
+
+  DETAIL -->|再生| PLAYER
+  DETAIL -->|リスト追加| PADD["プレイリスト追加シート"]:::sheet
+  DETAIL -->|名称変更/移動/コピー/削除| DOPS["各種ダイアログ"]:::dialog
+  PREVIEW -->|全画面・再生位置を引き継ぎ| PLAYER
+
+  classDef tab fill:#E8F1FF,stroke:#4A90E2,stroke-width:2px,color:#444444;
+  classDef push fill:#FFFFFF,stroke:#4A90E2,stroke-width:2px,color:#444444;
+  classDef sheet fill:#E9F7EC,stroke:#4A90E2,stroke-width:2px,color:#444444;
+  classDef dialog fill:#F4F4F4,stroke:#BBBBBB,stroke-width:1.5px,color:#444444,stroke-dasharray:5 3;
+</pre>
+        </section>
+
+        <section id="common">
+            <h2><span class="no">4</span> 共通仕様</h2>
+
+            <h3>4.1 デザインシステム（One UI ダークモード）</h3>
+            <p class="lead">One UI のダークモードを基調に、Samsungブルーをアクセントとしたスタイル（ダーク固定・モード切替なし）。色はトークン化し全画面で統一。</p>
+            <table class="spec">
+                <thead><tr><th>トークン</th><th>用途</th><th>値</th><th></th></tr></thead>
+                <tbody>
+                <tr><td class="k">bg / surface</td><td>画面・面の背景（黒基調）</td><td><code>#000000</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;border:1px solid #444;background:#000"></span></td></tr>
+                <tr><td class="k">surfaceContainer</td><td>検索バー・カード・チップ背景</td><td><code>#1C1D20</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;border:1px solid #333;background:#1C1D20"></span></td></tr>
+                <tr><td class="k">onSurface</td><td>主要テキスト</td><td><code>#F4F5F6</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;border:1px solid #ccc;background:#F4F5F6"></span></td></tr>
+                <tr><td class="k">onSurfaceVariant</td><td>副次テキスト・アイコン</td><td><code>#A9ADB3</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;background:#A9ADB3"></span></td></tr>
+                <tr><td class="k">accent</td><td>選択状態・進捗・主要ボタン</td><td><code>#4D90FE</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;background:#4D90FE"></span></td></tr>
+                <tr><td class="k">accentContainer</td><td>アクセントの暗色背景</td><td><code>#16324F</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;background:#16324F"></span></td></tr>
+                <tr><td class="k">divider</td><td>区切り線</td><td><code>#2A2B2E</code></td><td><span style="display:inline-block;width:40px;height:16px;border-radius:4px;background:#2A2B2E"></span></td></tr>
+                </tbody>
+            </table>
+            <table class="spec tbl-wide">
+                <tbody>
+                <tr><td class="k">タイポグラフィ</td><td>Noto Sans JP。大見出し 23px Bold、本文 14px、副次 11.5〜12.5px。</td></tr>
+                <tr><td class="k">角丸</td><td>検索バー 22px（ピル）、カード／グループ 18px、サムネ 14〜16px、端末フレーム 30px。</td></tr>
+                <tr><td class="k">アクセント方針</td><td>ブルーは「選択中タブ」「視聴進捗バー」「主要ボタン（再生）」「トグルON」「スライダー」に限定。情報は白／グレーで表現し、黒基調にコントラストを確保。</td></tr>
+                </tbody>
+            </table>
+
+            <h3>4.2 共通コンポーネント</h3>
+            <table class="spec">
+                <thead><tr><th>コンポーネント</th><th>説明</th><th>使用画面</th></tr></thead>
+                <tbody>
+                <tr><td class="k">ステータスバー</td><td>時刻＋電波／Wi-Fi／電池（端末標準の模式表現）。</td><td>全画面</td></tr>
+                <tr><td class="k">大見出しヘッダー</td><td>画面上部に大きな太字タイトル（片手操作を意識）。タブ画面はタイトルのみ＋右上アクション、プッシュ画面は戻る＋タイトル。</td><td>全タブ／プッシュ</td></tr>
+                <tr><td class="k">ピル検索バー</td><td>角丸22pxのフィルド検索入力。プレースホルダで対象を明示。</td><td>動画／フォルダ／フォルダ内動画</td></tr>
+                <tr><td class="k">並び替え行</td><td>左に「○○順 ▾」テキストボタン、右に表示切替（グリッド／リスト）と選択アイコン。</td><td>動画／フォルダ／フォルダ内動画</td></tr>
+                <tr><td class="k">ボトムナビ</td><td>動画／フォルダ／リスト／設定の4タブ。選択中はアクセント色。タップに加え、<b>画面を左右にスワイプしても隣のタブへ切り替えられる</b>（動画 ⇔ フォルダ ⇔ リスト ⇔ 設定）。<b>最後に開いていたタブを記憶し、次回アプリ起動時は前回のタブで開く。</b></td><td>タブ画面</td></tr>
+                <tr><td class="k">VideoTile（グリッド）</td><td>角丸サムネ＋再生時間バッジ＋視聴進捗バー、下にタイトル・メタ。枠線なし。</td><td>動画／フォルダ内動画</td></tr>
+                <tr><td class="k">VideoRow（リスト）</td><td>横長サムネ＋タイトル・メタ・タグ＋行末メニュー。</td><td>動画／フォルダ内動画</td></tr>
+                <tr><td class="k">日付グループ見出し</td><td>「今日」「今週」など日付で動画をグルーピング。</td><td>動画／フォルダ内動画</td></tr>
+                <tr><td class="k">情報カード／設定グループ</td><td>角丸の淡色カード内にラベル↔値の行を並べ、細い区切り線で分割。</td><td>動画詳細／設定</td></tr>
+                </tbody>
+            </table>
+
+            <h3>4.3 共通状態</h3>
+            <p class="lead">各画面は、データの読み込み状況と権限の状態に応じて表示が切り替わる。</p>
+            <table class="spec">
+                <thead><tr><th>状態</th><th>表示</th><th>主な文言</th></tr></thead>
+                <tbody>
+                <tr><td class="k">ローディング</td><td>中央にプログレスインジケータ</td><td>—</td></tr>
+                <tr><td class="k">エラー</td><td>中央にエラーメッセージ</td><td>例外内容を表示</td></tr>
+                <tr><td class="k">空状態</td><td>中央に説明テキスト</td><td>「動画が見つかりません」「フォルダが見つかりません」「プレイリストがありません」「このフォルダに動画はありません」「動画がありません」</td></tr>
+                <tr><td class="k">権限：許可(granted)</td><td>全動画を表示</td><td>「すべての動画にアクセス可能」</td></tr>
+                <tr><td class="k">権限：限定(limited)</td><td>選択動画のみ表示＋上部に追加アクセス導線バナー</td><td>「選択した動画のみアクセス可能」／「選択した動画のみ表示しています。必要な動画が見つからない場合はアクセス対象を追加してください。」</td></tr>
+                <tr><td class="k">権限：拒否(denied)</td><td>権限要求パネル（許可ボタン＋設定導線）</td><td>「動画へのアクセス許可が必要です」「端末内の動画を一覧表示するため、メディアアクセス権限を許可してください。」</td></tr>
+                <tr><td class="k">権限：不明(unknown)</td><td>確認中表示</td><td>「不明」</td></tr>
+                </tbody>
+            </table>
+
+            <h3>4.4 ボタン種別</h3>
+            <table class="spec">
+                <thead><tr><th>種別</th><th>意味</th><th>例</th></tr></thead>
+                <tbody>
+                <tr><td class="k">Filled（塗り）</td><td>画面の主要アクション。アクセント色。</td><td>再生</td></tr>
+                <tr><td class="k">Tonal（淡色塗り）</td><td>副次アクション。淡色背景。</td><td>共有・リスト追加</td></tr>
+                <tr><td class="k">Outlined / Text（枠線・文字）</td><td>補助アクション。削除は赤系で危険を明示。</td><td>名前変更・移動・コピー・削除</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="screens">
+            <h2><span class="no">5</span> 各画面詳細</h2>
+            <p class="lead">各画面のモックアップ（One UI ダークモード・HTML/CSSで再現）と、表示項目・操作・遷移・状態の仕様を示す。グリッド／リスト両対応の画面は両方を併記する。</p>
+        </section>
+
+        <section id="sc-library">
+            <h3>5.1 動画ライブラリ（SCR-01）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="sp"></span></div>
+                        <div class="appbar-large"><div class="t">動画ライブラリ</div></div>
+                        <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>動画やフォルダを検索</span></div>
+                        <div class="sortrow"><span class="sl">新しい順 <svg class="ic"><use href="#ic-expand"/></svg></span><span class="iconbtn accent"><svg class="ic"><use href="#ic-grid"/></svg></span></div>
+                        <div class="body">
+                            <div class="date-h">今日</div>
+                            <div class="vgrid">
+                                <div class="vtile"><div class="thumb g1"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><div class="prog"><i style="width:45%"></i></div><span class="dur" style="bottom:12px">3:42</span></div><div class="meta-t">海辺の夕焼け</div><div class="meta-s">3:42 ・ 84.2 MB</div></div>
+                                <div class="vtile"><div class="thumb g2"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><span class="dur">2:14</span></div><div class="meta-t">朝の散歩</div><div class="meta-s">2:14 ・ 64.0 MB</div></div>
+                            </div>
+                            <div class="date-h gap">今週</div>
+                            <div class="vgrid">
+                                <div class="vtile"><div class="thumb g3"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><span class="dur">12:08</span></div><div class="meta-t">運動会リレー</div><div class="meta-s">12:08 ・ 256 MB</div></div>
+                                <div class="vtile"><div class="thumb g4"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><div class="prog"><i style="width:70%"></i></div><span class="dur" style="bottom:12px">1:02:14</span></div><div class="meta-t">旅行ハイライト</div><div class="meta-s">1:02:14 ・ 1.2 GB</div></div>
+                            </div>
+                        </div>
+                        <div class="bottomnav">
+                            <div class="nav-item on"><svg class="ic"><use href="#ic-video"/></svg>動画</div>
+                            <div class="nav-item"><svg class="ic"><use href="#ic-folder"/></svg>フォルダ</div>
+                            <div class="nav-item"><svg class="ic"><use href="#ic-list"/></svg>リスト</div>
+                            <div class="nav-item"><svg class="ic"><use href="#ic-settings"/></svg>設定</div>
+                        </div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-01</b> 動画ライブラリ（グリッド表示）</div>
+                </div>
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="sp"></span></div>
+                        <div class="appbar-large"><div class="t">動画ライブラリ</div></div>
+                        <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>動画やフォルダを検索</span></div>
+                        <div class="sortrow"><span class="sl">新しい順 <svg class="ic"><use href="#ic-expand"/></svg></span><span class="iconbtn accent"><svg class="ic"><use href="#ic-viewlist"/></svg></span></div>
+                        <div class="body">
+                            <div class="date-h">今日</div>
+                            <div class="vlist">
+                                <div class="vrow"><div class="thumb g1"><span class="dur sm">3:42</span><div class="prog"><i style="width:45%"></i></div></div><div class="vb"><div class="t">海辺の夕焼け.mp4</div><div class="s">Camera ・ 3:42 ・ 84.2 MB</div><div class="tags"><em>HDR</em></div></div></div>
+                                <div class="vrow"><div class="thumb g2"><span class="dur sm">2:14</span></div><div class="vb"><div class="t">朝の散歩.mp4</div><div class="s">Camera ・ 2:14 ・ 64.0 MB</div></div></div>
+                            </div>
+                            <div class="date-h gap">今週</div>
+                            <div class="vlist">
+                                <div class="vrow"><div class="thumb g3"><span class="dur sm">12:08</span></div><div class="vb"><div class="t">運動会リレー.mp4</div><div class="s">Movies ・ 12:08 ・ 256 MB</div><div class="tags"><em>スロー</em></div></div></div>
+                                <div class="vrow"><div class="thumb g4"><span class="dur sm">1:02:14</span><div class="prog"><i style="width:70%"></i></div></div><div class="vb"><div class="t">旅行ハイライト.mov</div><div class="s">DCIM/Travel ・ 1:02:14 ・ 1.2 GB</div><div class="tags"><em>4K</em></div></div></div>
+                            </div>
+                        </div>
+                        <div class="bottomnav">
+                            <div class="nav-item on"><svg class="ic"><use href="#ic-video"/></svg>動画</div>
+                            <div class="nav-item"><svg class="ic"><use href="#ic-folder"/></svg>フォルダ</div>
+                            <div class="nav-item"><svg class="ic"><use href="#ic-list"/></svg>リスト</div>
+                            <div class="nav-item"><svg class="ic"><use href="#ic-settings"/></svg>設定</div>
+                        </div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-01</b> 動画ライブラリ（リスト表示）</div>
+                </div>
+            </div>
+
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>端末内のすべての動画を一覧表示するメイン画面。検索・並び替え・複数選択操作の起点。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>タブ画面（ボトムナビ「動画」）。初回起動時の初期画面。以降は前回開いていたタブで起動する。</td></tr>
+            <tr><td class="k">表示形式</td><td>グリッド／リストを切替（最後に使った表示形式を記憶し次回も適用）。リスト時は横長サムネ＋情報行。</td></tr>
+            </tbody></table>
+
+            <h4>表示項目</h4>
+            <table class="spec">
+                <thead><tr><th>項目</th><th>内容</th><th>表示条件</th></tr></thead>
+                <tbody>
+                <tr><td class="k">タイトル見出し</td><td>「動画ライブラリ」（大見出し）</td><td>常時</td></tr>
+                <tr><td class="k">検索バー</td><td>プレースホルダ「動画やフォルダを検索」</td><td>常時</td></tr>
+                <tr><td class="k">サムネイル</td><td>動画のサムネイル画像</td><td>常時（取得できない場合はプレースホルダ）</td></tr>
+                <tr><td class="k">再生時間バッジ</td><td>サムネ右下に再生時間（例: 3:42）</td><td>常時</td></tr>
+                <tr><td class="k">視聴進捗バー</td><td>サムネ下端に視聴済みの割合を表示</td><td>視聴履歴がある場合</td></tr>
+                <tr><td class="k">タイトル</td><td>動画のファイル名（1行・省略表示）</td><td>常時</td></tr>
+                <tr><td class="k">メタ情報</td><td>フォルダ名・更新/作成日・ファイルサイズ</td><td>常時</td></tr>
+                <tr><td class="k">動画タグ</td><td>HDR / 360度 / スロー / Hyperlapse / DRM / 再生不可</td><td>タグがある場合</td></tr>
+                <tr><td class="k">ボトムナビ</td><td>動画（選択中）／フォルダ／リスト／設定</td><td>常時</td></tr>
+                </tbody>
+            </table>
+
+            <h4>操作・アクション</h4>
+            <table class="spec">
+                <thead><tr><th>操作</th><th>UI</th><th>動作 / 遷移先</th><th>備考</th></tr></thead>
+                <tbody>
+                <tr><td class="k">検索</td><td>検索バー</td><td>入力に応じて一覧を絞り込み（履歴は保持しない）。</td><td>検索対象＝すべて／動画名／フォルダ名</td></tr>
+                <tr><td class="k">並び替え</td><td>「○○順 ▾」</td><td>更新日時／作成日時／タイトル／再生時間／サイズ ＋ 昇順/降順</td><td>選択は記憶され次回も適用</td></tr>
+                <tr><td class="k">表示切替</td><td>グリッド／リストアイコン</td><td>グリッド⇄リスト表示</td><td>—</td></tr>
+                <tr><td class="k">動画を再生</td><td>タイル タップ</td><td>→ <a href="#sc-player" class="x">全画面プレイヤー</a></td><td>—</td></tr>
+                <tr><td class="k">項目メニュー</td><td>長押し</td><td>長押しで操作メニュー（共有／名前変更／移動／コピー／リスト追加／削除／<a href="#sc-detail" class="x">詳細</a>／選択）を表示。個別のメニューボタンは設けず長押しに一本化。</td><td>—</td></tr>
+                <tr><td class="k">簡易再生</td><td>簡易再生アイコン</td><td>→ <a href="#sc-preview" class="x">簡易プレビュー</a>（ボトムシート）</td><td>再生可能なとき</td></tr>
+                <tr><td class="k">複数選択</td><td>長押しメニューの「選択」</td><td>選択モードへ。AppBarが「○件選択中」＋全選択／共有／移動／コピー／削除に変化。</td><td>×で解除</td></tr>
+                <tr><td class="k">移動・コピー</td><td>選択モードの該当ボタン</td><td>→ <a href="#dialogs" class="x">移動/コピー先選択</a>（競合時はファイル競合）</td><td>バッチ進捗ダイアログ表示</td></tr>
+                <tr><td class="k">削除</td><td>選択モードの削除</td><td>→ 削除確認ダイアログ → バッチ削除</td><td>「選択中の○件を端末から削除します。」</td></tr>
+                <tr><td class="k">設定</td><td>ボトムナビ「設定」</td><td>→ <a href="#sc-settings" class="x">設定</a></td><td>—</td></tr>
+                </tbody>
+            </table>
+
+            <h4>状態・バリエーション</h4>
+            <table class="spec">
+                <thead><tr><th>状態</th><th>表示 / 文言</th></tr></thead>
+                <tbody>
+                <tr><td class="k">権限：拒否</td><td>権限要求パネル：「動画へのアクセス許可が必要です」＋「権限を許可」「設定を開く」</td></tr>
+                <tr><td class="k">権限：限定</td><td>上部バナー：「選択した動画のみ表示しています。…アクセス対象を追加してください。」＋「追加選択」「設定」</td></tr>
+                <tr><td class="k">空状態</td><td>「動画が見つかりません」</td></tr>
+                <tr><td class="k">選択モード</td><td>AppBarに選択件数、アクション（全選択・共有・移動・コピー・削除）</td></tr>
+                <tr><td class="k">ローディング / エラー</td><td>プログレスインジケータ／例外メッセージ</td></tr>
+                </tbody>
+            </table>
+            <p class="lead">関連ダイアログ: <a href="#dialogs" class="x">移動/コピー先選択・ファイル競合・削除確認・バッチ進捗</a></p>
+        </section>
+
+        <section id="sc-folder">
+            <h3>5.2 フォルダ（SCR-02）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="sp"></span></div>
+                        <div class="appbar-large"><div class="t">フォルダ</div></div>
+                        <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>フォルダや動画を検索</span></div>
+                        <div class="sortrow"><span class="sl">名前順 <svg class="ic"><use href="#ic-expand"/></svg></span><span class="iconbtn accent"><svg class="ic"><use href="#ic-grid"/></svg></span></div>
+                        <div class="body"><div class="folder-grid">
+                            <div class="folder-card"><div class="thumb g1"></div><div class="n">Camera</div><div class="c">128件</div></div>
+                            <div class="folder-card"><div class="thumb g2"></div><div class="n">Movies</div><div class="c">42件</div></div>
+                            <div class="folder-card"><div class="thumb g3"></div><div class="n">DCIM/Travel</div><div class="c">67件</div></div>
+                            <div class="folder-card"><div class="thumb gfolder"><svg class="ic"><use href="#ic-folder"/></svg></div><div class="n">WhatsApp Video</div><div class="c">9件</div></div>
+                        </div></div>
+                        <div class="bottomnav"><div class="nav-item"><svg class="ic"><use href="#ic-video"/></svg>動画</div><div class="nav-item on"><svg class="ic"><use href="#ic-folder"/></svg>フォルダ</div><div class="nav-item"><svg class="ic"><use href="#ic-list"/></svg>リスト</div><div class="nav-item"><svg class="ic"><use href="#ic-settings"/></svg>設定</div></div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-02</b> フォルダ（グリッド表示）</div>
+                </div>
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="sp"></span></div>
+                        <div class="appbar-large"><div class="t">フォルダ</div></div>
+                        <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>フォルダや動画を検索</span></div>
+                        <div class="sortrow"><span class="sl">名前順 <svg class="ic"><use href="#ic-expand"/></svg></span><span class="iconbtn accent"><svg class="ic"><use href="#ic-viewlist"/></svg></span></div>
+                        <div class="body" style="padding:0 6px">
+                            <div class="folder-row"><div class="ft g1"></div><div class="fb"><div class="n">Camera</div><div class="s">128件 ・ 4.2 GB ・ 内部ストレージ</div></div></div>
+                            <div class="folder-row"><div class="ft g2"></div><div class="fb"><div class="n">Movies</div><div class="s">42件 ・ 8.1 GB ・ 内部ストレージ</div></div></div>
+                            <div class="folder-row"><div class="ft g3"></div><div class="fb"><div class="n">DCIM/Travel</div><div class="s">67件 ・ 12.4 GB ・ SDカード</div></div></div>
+                            <div class="folder-row"><div class="ft g4"></div><div class="fb"><div class="n">Download</div><div class="s">15件 ・ 1.1 GB ・ 内部ストレージ</div></div></div>
+                            <div class="folder-row"><div class="ft gfolder"><svg class="ic"><use href="#ic-folder"/></svg></div><div class="fb"><div class="n">WhatsApp Video</div><div class="s">9件 ・ 320.5 MB ・ 内部ストレージ</div></div></div>
+                        </div>
+                        <div class="bottomnav"><div class="nav-item"><svg class="ic"><use href="#ic-video"/></svg>動画</div><div class="nav-item on"><svg class="ic"><use href="#ic-folder"/></svg>フォルダ</div><div class="nav-item"><svg class="ic"><use href="#ic-list"/></svg>リスト</div><div class="nav-item"><svg class="ic"><use href="#ic-settings"/></svg>設定</div></div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-02</b> フォルダ（リスト表示）</div>
+                </div>
+            </div>
+
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>保存フォルダ単位で動画を一覧。フォルダの名称変更・削除。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>タブ画面（ボトムナビ「フォルダ」）。</td></tr>
+            </tbody></table>
+            <h4>表示項目</h4>
+            <table class="spec">
+                <thead><tr><th>項目</th><th>内容</th><th>表示条件</th></tr></thead>
+                <tbody>
+                <tr><td class="k">フォルダ代表サムネ</td><td>フォルダ内の代表動画のサムネイル。無い場合はフォルダアイコン。</td><td>常時</td></tr>
+                <tr><td class="k">フォルダ名</td><td>フォルダ名</td><td>常時</td></tr>
+                <tr><td class="k">サブ情報</td><td>動画件数・合計サイズ・保存場所（内部ストレージ／SDカード等）・更新日</td><td>常時（情報がある項目のみ）</td></tr>
+                </tbody>
+            </table>
+            <h4>操作・アクション</h4>
+            <table class="spec">
+                <thead><tr><th>操作</th><th>UI</th><th>動作 / 遷移先</th></tr></thead>
+                <tbody>
+                <tr><td class="k">フォルダを開く</td><td>カード/行 タップ</td><td>→ <a href="#sc-folder-videos" class="x">フォルダ内動画</a></td></tr>
+                <tr><td class="k">並び替え</td><td>「名前順 ▾」</td><td>フォルダ名／動画件数／更新日時 ＋ 昇順/降順</td></tr>
+                <tr><td class="k">表示切替</td><td>グリッド／リストアイコン</td><td>アルバム風グリッド ⇄ 行リスト</td></tr>
+                <tr><td class="k">名称変更 / 削除</td><td>長押し</td><td>→ フォルダ名変更／削除確認ダイアログ（バッチ処理）</td></tr>
+                </tbody>
+            </table>
+            <h4>状態・バリエーション</h4>
+            <table class="spec"><thead><tr><th>状態</th><th>表示 / 文言</th></tr></thead><tbody>
+            <tr><td class="k">空状態</td><td>「フォルダが見つかりません」</td></tr>
+            </tbody></table>
+        </section>
+
+        <section id="sc-playlist">
+            <h3>5.3 プレイリスト（SCR-03）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="sp"></span><span class="iconbtn"><svg class="ic"><use href="#ic-add"/></svg></span></div>
+                        <div class="appbar-large"><div class="t">プレイリスト</div></div>
+                        <div class="body" style="padding-top:4px">
+                            <div class="pl-row"><div class="pt g1"><svg class="ic"><use href="#ic-list"/></svg></div><div class="pb"><div class="n">あとで見る</div><div class="s">24件の動画</div></div><span class="ch"><svg class="ic"><use href="#ic-chevron"/></svg></span></div>
+                            <div class="pl-row"><div class="pt g2"><svg class="ic"><use href="#ic-list"/></svg></div><div class="pb"><div class="n">週末に観る</div><div class="s">8件の動画</div></div><span class="ch"><svg class="ic"><use href="#ic-chevron"/></svg></span></div>
+                            <div class="pl-row"><div class="pt g3"><svg class="ic"><use href="#ic-list"/></svg></div><div class="pb"><div class="n">キッズ向け</div><div class="s">15件の動画</div></div><span class="ch"><svg class="ic"><use href="#ic-chevron"/></svg></span></div>
+                            <div class="pl-row"><div class="pt g4"><svg class="ic"><use href="#ic-list"/></svg></div><div class="pb"><div class="n">旅行の思い出 2024</div><div class="s">42件の動画</div></div><span class="ch"><svg class="ic"><use href="#ic-chevron"/></svg></span></div>
+                            <div class="pl-row"><div class="pt g5"><svg class="ic"><use href="#ic-list"/></svg></div><div class="pb"><div class="n">作業用BGV</div><div class="s">6件の動画</div></div><span class="ch"><svg class="ic"><use href="#ic-chevron"/></svg></span></div>
+                        </div>
+                        <div class="bottomnav"><div class="nav-item"><svg class="ic"><use href="#ic-video"/></svg>動画</div><div class="nav-item"><svg class="ic"><use href="#ic-folder"/></svg>フォルダ</div><div class="nav-item on"><svg class="ic"><use href="#ic-list"/></svg>リスト</div><div class="nav-item"><svg class="ic"><use href="#ic-settings"/></svg>設定</div></div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-03</b> プレイリスト</div>
+                </div>
+            </div>
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>ユーザー作成のプレイリストを一覧・管理。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>タブ画面（ボトムナビ「リスト」）。</td></tr>
+            </tbody></table>
+            <h4>表示項目・操作</h4>
+            <table class="spec">
+                <thead><tr><th>項目 / 操作</th><th>内容 / データソース・動作</th></tr></thead>
+                <tbody>
+                <tr><td class="k">プレイリスト名</td><td>プレイリスト名</td></tr>
+                <tr><td class="k">動画件数</td><td>「○件の動画」</td></tr>
+                <tr><td class="k">開く</td><td>行タップ → <a href="#sc-player" class="x">プレイリスト内動画（SCR-03b）</a>。並べ替え・削除・先頭から連続再生が可能。</td></tr>
+                <tr><td class="k">作成</td><td>＋ → プレイリスト作成ダイアログ（ラベル「名前」）</td></tr>
+                <tr><td class="k">名称変更 / 削除</td><td>長押し → 名称変更ダイアログ／削除</td></tr>
+                </tbody>
+            </table>
+            <h4>状態</h4>
+            <table class="spec"><thead><tr><th>状態</th><th>文言</th></tr></thead><tbody>
+            <tr><td class="k">空状態（一覧）</td><td>「プレイリストがありません」</td></tr>
+            <tr><td class="k">空状態（リスト内）</td><td>「動画がありません」</td></tr>
+            <tr><td class="k">リストから削除</td><td><span class="msg">○○ をリストから削除しました</span></td></tr>
+            </tbody></table>
+        </section>
+
+        <section id="sc-folder-videos">
+            <h3>5.4 フォルダ内動画（SCR-04）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="iconbtn"><svg class="ic"><use href="#ic-back"/></svg></span><span class="sp"></span><span class="iconbtn accent"><svg class="ic"><use href="#ic-grid"/></svg></span></div>
+                        <div class="appbar-large"><div class="t">Camera</div><div class="c">128件 ・ 4.2 GB</div></div>
+                        <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>このフォルダ内を検索</span></div>
+                        <div class="body" style="padding-top:4px"><div class="vgrid">
+                            <div class="vtile"><div class="thumb g1"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><div class="prog"><i style="width:30%"></i></div><span class="dur" style="bottom:12px">2:14</span></div><div class="meta-t">朝の散歩</div><div class="meta-s">2:14 ・ 64.0 MB</div></div>
+                            <div class="vtile"><div class="thumb g2"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><div class="prog"><i style="width:45%"></i></div><span class="dur" style="bottom:12px">3:42</span></div><div class="meta-t">海辺の夕焼け</div><div class="meta-s">3:42 ・ 84.2 MB</div></div>
+                            <div class="vtile"><div class="thumb g3"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><span class="dur">8:20</span></div><div class="meta-t">花火大会</div><div class="meta-s">8:20 ・ 312 MB</div></div>
+                            <div class="vtile"><div class="thumb g4"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><span class="dur">1:08</span></div><div class="meta-t">ペットの記録</div><div class="meta-s">1:08 ・ 45.6 MB</div></div>
+                            <div class="vtile"><div class="thumb g5"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><div class="prog"><i style="width:90%"></i></div><span class="dur" style="bottom:12px">15:42</span></div><div class="meta-t">誕生日パーティ</div><div class="meta-s">15:42 ・ 198 MB</div></div>
+                            <div class="vtile"><div class="thumb g6"><div class="pc"><svg class="ic"><use href="#ic-play"/></svg></div><span class="dur">4:05</span></div><div class="meta-t">公園の風景</div><div class="meta-s">4:05 ・ 72.1 MB</div></div>
+                        </div></div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-04</b> フォルダ内動画（グリッド表示）</div>
+                </div>
+                <div class="screen">
+                    <div class="phone h"><div class="scroll">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="iconbtn"><svg class="ic"><use href="#ic-back"/></svg></span><span class="sp"></span><span class="iconbtn accent"><svg class="ic"><use href="#ic-viewlist"/></svg></span></div>
+                        <div class="appbar-large"><div class="t">Camera</div><div class="c">128件 ・ 4.2 GB</div></div>
+                        <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>このフォルダ内を検索</span></div>
+                        <div class="body"><div class="vlist">
+                            <div class="vrow"><div class="thumb g1"><span class="dur sm">2:14</span><div class="prog"><i style="width:30%"></i></div></div><div class="vb"><div class="t">朝の散歩.mp4</div><div class="s">2:14 ・ 64.0 MB</div></div></div>
+                            <div class="vrow"><div class="thumb g2"><span class="dur sm">3:42</span><div class="prog"><i style="width:45%"></i></div></div><div class="vb"><div class="t">海辺の夕焼け.mp4</div><div class="s">3:42 ・ 84.2 MB</div><div class="tags"><em>HDR</em></div></div></div>
+                            <div class="vrow"><div class="thumb g3"><span class="dur sm">8:20</span></div><div class="vb"><div class="t">花火大会.mp4</div><div class="s">8:20 ・ 312 MB</div><div class="tags"><em>スロー</em></div></div></div>
+                            <div class="vrow"><div class="thumb g4"><span class="dur sm">1:08</span></div><div class="vb"><div class="t">ペットの記録.mp4</div><div class="s">1:08 ・ 45.6 MB</div></div></div>
+                            <div class="vrow"><div class="thumb g5"><span class="dur sm">15:42</span><div class="prog"><i style="width:90%"></i></div></div><div class="vb"><div class="t">誕生日パーティ.mp4</div><div class="s">15:42 ・ 198 MB</div></div></div>
+                        </div></div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-04</b> フォルダ内動画（リスト表示）</div>
+                </div>
+            </div>
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>選択したフォルダ内の動画のみを一覧表示。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>プッシュ画面。<a href="#sc-folder" class="x">フォルダ</a>でフォルダをタップして遷移。戻るで一覧へ。</td></tr>
+            <tr><td class="k">表示項目 / 操作</td><td>動画ライブラリと同じ動画タイル／動画行で表示。タップで <a href="#sc-player" class="x">全画面プレイヤー</a>、長押しで <a href="#sc-detail" class="x">動画詳細</a>。ツールバー右の切替で グリッド⇄リスト。</td></tr>
+            <tr><td class="k">空状態</td><td>「このフォルダに動画はありません」</td></tr>
+            </tbody></table>
+        </section>
+
+        <section id="sc-detail">
+            <h3>5.5 動画詳細（SCR-05）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone flow">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="iconbtn"><svg class="ic"><use href="#ic-back"/></svg></span><span class="sp"></span></div>
+                        <div class="detail">
+                            <div class="detail-hero g1"><div class="fab"><svg class="ic"><use href="#ic-play"/></svg></div></div>
+                            <div class="detail-title">海辺の夕焼け.mp4</div>
+                            <div class="detail-meta">Camera ・ 84.2 MB ・ 2024/08/12</div>
+                            <div class="chips"><span class="chip">HDR</span></div>
+                            <div class="btn filled"><svg class="ic"><use href="#ic-play"/></svg>再生</div>
+                            <div class="qa-row">
+                                <div class="qa"><span class="c"><svg class="ic"><use href="#ic-share"/></svg></span>共有</div>
+                                <div class="qa"><span class="c"><svg class="ic"><use href="#ic-edit"/></svg></span>名前変更</div>
+                                <div class="qa"><span class="c"><svg class="ic"><use href="#ic-move"/></svg></span>移動</div>
+                                <div class="qa"><span class="c"><svg class="ic"><use href="#ic-copy"/></svg></span>コピー</div>
+                                <div class="qa"><span class="c"><svg class="ic"><use href="#ic-pladd"/></svg></span>リスト</div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-row"><span class="l">フォルダ</span><span class="v">Camera</span></div>
+                                <div class="info-row"><span class="l">保存場所</span><span class="v">DCIM/Camera/</span></div>
+                                <div class="info-row"><span class="l">形式</span><span class="v">video/mp4</span></div>
+                                <div class="info-row"><span class="l">再生時間</span><span class="v">3:42</span></div>
+                                <div class="info-row"><span class="l">サイズ</span><span class="v">84.2 MB</span></div>
+                                <div class="info-row"><span class="l">解像度</span><span class="v">1920×1080</span></div>
+                                <div class="info-row"><span class="l">ビットレート</span><span class="v">12.4 Mbps</span></div>
+                                <div class="info-row"><span class="l">フレームレート</span><span class="v">29.97 fps</span></div>
+                                <div class="info-row"><span class="l">作成日</span><span class="v">2024/08/12</span></div>
+                                <div class="info-row"><span class="l">更新日</span><span class="v">2024/08/12</span></div>
+                            </div>
+                            <div class="del-btn"><svg class="ic"><use href="#ic-delete"/></svg>削除</div>
+                        </div>
+                    </div>
+                    <div class="screen-cap"><b>SCR-05</b> 動画詳細</div>
+                </div>
+            </div>
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>動画のメタ情報を表示し、再生・共有・移動・コピー・名称変更・リスト追加・削除など各種操作を行う。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>プッシュ画面。一覧（動画ライブラリ／フォルダ内動画）の長押しメニューの「詳細」から遷移。</td></tr>
+            </tbody></table>
+            <h4>表示項目</h4>
+            <table class="spec">
+                <thead><tr><th>項目</th><th>内容</th></tr></thead>
+                <tbody>
+                <tr><td class="k">ヒーローサムネ＋再生</td><td>サムネイルに再生ボタンを重ねて表示。タップで再生。</td></tr>
+                <tr><td class="k">タイトル</td><td>動画のファイル名</td></tr>
+                <tr><td class="k">メタ</td><td>フォルダ・ファイルサイズ・更新日</td></tr>
+                <tr><td class="k">タグ</td><td>HDR など（該当する属性のみ）</td></tr>
+                <tr><td class="k">情報カード</td><td>フォルダ／保存場所／形式／再生時間／サイズ／解像度／ビットレート／フレームレート／作成日／更新日／再生可否／前回再生位置／保存場所URI</td></tr>
+                </tbody>
+            </table>
+            <h4>操作・アクション</h4>
+            <table class="spec">
+                <thead><tr><th>操作</th><th>動作 / 遷移先・フィードバック</th></tr></thead>
+                <tbody>
+                <tr><td class="k">再生</td><td>→ <a href="#sc-player" class="x">全画面プレイヤー</a></td></tr>
+                <tr><td class="k">共有</td><td>Android共有シートへ。失敗時 <span class="msg" style="color:#a33;background:#fdeaea;border-color:#f3c6c6">共有できませんでした: …</span></td></tr>
+                <tr><td class="k">リスト追加</td><td>→ <a href="#dialogs" class="x">プレイリスト追加シート</a>（新規作成も可）。<span class="msg">○○ に追加しました</span></td></tr>
+                <tr><td class="k">名前変更</td><td>→ 名前変更ダイアログ（拡張子は維持）。<span class="msg">名前を変更しました</span></td></tr>
+                <tr><td class="k">移動 / コピー</td><td>→ 移動/コピー先選択（競合時はファイル競合）。<span class="msg">移動しました</span>/<span class="msg">コピーしました</span></td></tr>
+                <tr><td class="k">削除</td><td>→ 削除確認「○○ を端末から削除します。」→ <span class="msg">削除しました</span></td></tr>
+                </tbody>
+            </table>
+            <p class="lead">※ アクションは「再生（主要ボタン）＋クイックアクション（共有・名前変更・移動・コピー・リスト追加）」として提供する。</p>
+        </section>
+
+        <section id="sc-player">
+            <h3>5.6 全画面プレイヤー（SCR-06）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone"><div class="player">
+                        <div class="video g1"></div>
+                        <div class="ov"></div>
+                        <div class="ptop"><span class="iconbtn"><svg class="ic"><use href="#ic-back"/></svg></span><span class="ttl">海辺の夕焼け.mp4</span><span class="iconbtn"><svg class="ic"><use href="#ic-volume"/></svg></span></div>
+                        <div class="center">
+                            <span class="tcircle"><svg class="ic"><use href="#ic-prev"/></svg></span>
+                            <span class="tcircle"><svg class="ic"><use href="#ic-replay10"/></svg></span>
+                            <span class="pcircle"><svg class="ic"><use href="#ic-pause"/></svg></span>
+                            <span class="tcircle"><svg class="ic"><use href="#ic-forward10"/></svg></span>
+                            <span class="tcircle"><svg class="ic"><use href="#ic-next"/></svg></span>
+                        </div>
+                        <div class="seek"><span>1:39</span><span class="track"><i style="width:45%"></i><b style="left:calc(45% - 7px)"></b></span><span>3:42</span></div>
+                        <div class="ptools">
+                            <span class="ptool"><svg class="ic"><use href="#ic-rotate"/></svg></span>
+                            <span class="ptool">1.0x</span>
+                            <span class="ptool"><svg class="ic"><use href="#ic-volume"/></svg></span>
+                        </div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-06</b> 全画面プレイヤー（コントロール表示時）</div>
+                </div>
+            </div>
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>動画を全画面で再生。再生制御・シーク・前後送り・音量・画面回転・再生位置保存。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>プッシュ画面（黒背景・没入）。一覧／詳細／プレビュー／プレイリストから遷移。簡易プレビューから開いた場合は、プレビューで再生していた位置から続けて再生する。タップでコントロール表示/非表示。</td></tr>
+            </tbody></table>
+            <h4>表示項目・操作</h4>
+            <table class="spec">
+                <thead><tr><th>要素</th><th>内容 / 動作</th></tr></thead>
+                <tbody>
+                <tr><td class="k">上部バー</td><td>戻る／タイトル／音量</td></tr>
+                <tr><td class="k">中央コントロール</td><td>前へ・10秒戻る・再生/一時停止・10秒進む・次へ（プレイリスト時に前後送り有効）</td></tr>
+                <tr><td class="k">シークバー</td><td>現在位置／総再生時間とスライダー。ドラッグでシーク。</td></tr>
+                <tr><td class="k">下部ツール</td><td>画面回転／再生速度／音量</td></tr>
+                <tr><td class="k">画面回転</td><td>縦横の切替に対応（端末の向きに応じて表示を切り替え）</td></tr>
+                <tr><td class="k">再生位置保存</td><td>動画を閉じたときに現在の再生位置を自動で保存する（常時動作・設定不要）。次回はその位置から再開。</td></tr>
+                </tbody>
+            </table>
+            <h4>状態</h4>
+            <table class="spec"><thead><tr><th>状態</th><th>表示 / 文言</th></tr></thead><tbody>
+            <tr><td class="k">再生不可（一般）</td><td>「この動画はアプリ内で再生できません」＋「対応していない形式、破損、または読み取り権限の問題により再生できません。」＋「前へ」「次へ」</td></tr>
+            <tr><td class="k">再生不可（DRM）</td><td>「DRM保護によりアプリ内で再生できません。」</td></tr>
+            <tr><td class="k">動画なし</td><td>「動画が見つかりません」</td></tr>
+            </tbody></table>
+        </section>
+
+        <section id="sc-preview">
+            <h3>5.7 簡易プレビュー（SCR-07）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone"><div class="sheet-screen">
+                        <div style="position:absolute;inset:0;background:var(--bg)">
+                            <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                            <div class="appbar-large"><div class="t">動画ライブラリ</div></div>
+                            <div class="pill-search"><svg class="ic"><use href="#ic-search"/></svg><span>動画やフォルダを検索</span></div>
+                            <div class="vgrid"><div class="vtile"><div class="thumb g1"></div><div class="meta-t">海辺の夕焼け</div></div><div class="vtile"><div class="thumb g2"></div><div class="meta-t">朝の散歩</div></div></div>
+                        </div>
+                        <div class="dim"></div>
+                        <div class="sheet">
+                            <div class="handle"></div>
+                            <div class="video g1"><svg class="ic"><use href="#ic-play"/></svg></div>
+                            <div class="st">海辺の夕焼け.mp4</div>
+                            <div class="ss">1:39 / 3:42</div>
+                            <div class="ctrls">
+                                <span class="tcircle"><svg class="ic"><use href="#ic-replay10"/></svg></span>
+                                <span class="pcircle"><svg class="ic"><use href="#ic-pause"/></svg></span>
+                                <span class="tcircle"><svg class="ic"><use href="#ic-forward10"/></svg></span>
+                                <span class="tcircle"><svg class="ic"><use href="#ic-volume"/></svg></span>
+                                <span class="tcircle"><svg class="ic"><use href="#ic-fullscreen"/></svg></span>
+                            </div>
+                        </div>
+                    </div></div>
+                    <div class="screen-cap"><b>SCR-07</b> 簡易プレビュー（ボトムシート）</div>
+                </div>
+            </div>
+            <h4>概要・操作</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>一覧を離れずに動画を簡易再生するボトムシート。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>ボトムシート。一覧の簡易再生アイコンから表示（再生可能なとき）。</td></tr>
+            <tr><td class="k">表示項目</td><td>ドラッグハンドル／動画プレイヤー／タイトル／現在位置・総時間「1:39 / 3:42」</td></tr>
+            <tr><td class="k">操作</td><td>10秒戻る・再生/一時停止・10秒進む・音量・全画面（→ <a href="#sc-player" class="x">全画面プレイヤー</a>。<b>プレビューで再生していた位置から続けて再生</b>）。シートを閉じると再生位置を保存。</td></tr>
+            <tr><td class="k">再生不可時</td><td>エラー表示＋「詳細を開く」</td></tr>
+            </tbody></table>
+        </section>
+
+        <section id="sc-settings">
+            <h3>5.8 設定（SCR-08）</h3>
+            <div class="screens">
+                <div class="screen">
+                    <div class="phone flow">
+                        <div class="statusbar"><span>9:41</span><svg viewBox="0 0 74 16" style="width:46px;height:11px;color:#F4F5F6"><use href="#sb-r"/></svg></div>
+                        <div class="toolbar"><span class="sp"></span></div>
+                        <div class="appbar-large"><div class="t">設定</div></div>
+                        <div class="set-wrap">
+                            <div><div class="set-section">権限</div><div class="set-group">
+                                <div class="set-row"><span class="iconbtn muted" style="width:24px"><svg class="ic"><use href="#ic-verified"/></svg></span><div class="st"><div class="a">メディアアクセス権限</div><div class="b">すべての動画にアクセス可能</div></div><div class="val"><svg class="ic"><use href="#ic-chevron"/></svg></div></div>
+                            </div></div>
+                            <div><div class="set-section">情報</div><div class="set-group">
+                                <div class="set-row"><div class="st"><div class="a">アプリ情報</div></div><div class="val">1.0.0 <svg class="ic"><use href="#ic-chevron"/></svg></div></div>
+                                <div class="set-row"><div class="st"><div class="a">利用規約</div></div><div class="val"><svg class="ic"><use href="#ic-chevron"/></svg></div></div>
+                                <div class="set-row"><div class="st"><div class="a">プライバシーポリシー</div></div><div class="val"><svg class="ic"><use href="#ic-chevron"/></svg></div></div>
+                            </div></div>
+                        </div>
+                        <div class="bottomnav"><div class="nav-item"><svg class="ic"><use href="#ic-video"/></svg>動画</div><div class="nav-item"><svg class="ic"><use href="#ic-folder"/></svg>フォルダ</div><div class="nav-item"><svg class="ic"><use href="#ic-list"/></svg>リスト</div><div class="nav-item on"><svg class="ic"><use href="#ic-settings"/></svg>設定</div></div>
+                    </div>
+                    <div class="screen-cap"><b>SCR-08</b> 設定</div>
+                </div>
+            </div>
+            <h4>概要・到達経路</h4>
+            <table class="spec tbl-wide"><tbody>
+            <tr><td class="k">目的</td><td>権限の確認・アプリ情報の確認。</td></tr>
+            <tr><td class="k">種別 / 到達</td><td>タブ画面（ボトムナビ「設定」）。One UI 案では設定項目を角丸グループカードに集約。</td></tr>
+            </tbody></table>
+            <h4>設定項目</h4>
+            <table class="spec">
+                <thead><tr><th>グループ</th><th>項目</th><th>種別 / 既定値・選択肢</th></tr></thead>
+                <tbody>
+                <tr><td class="k">権限</td><td>メディアアクセス権限</td><td>状態表示（許可／限定／拒否／不明）＋ 再確認・アクセス動画選択・Android設定への導線</td></tr>
+                <tr><td class="k">情報</td><td>アプリ情報 / 利用規約 / プライバシーポリシー</td><td>バージョン表示＋テキストダイアログ</td></tr>
+                </tbody>
+            </table>
+            <p class="lead">※ サムネイルキャッシュの容量上限は <b>512MB 固定</b>（ユーザー設定なし）。超過分は古いサムネから自動的に削除して自動管理する。手動で消去したい場合は Android の「設定 → アプリ → ストレージ」から行う（アプリ内に削除操作は設けない）。</p>
+        </section>
+
+        <section id="dialogs">
+            <h2><span class="no">6</span> ダイアログ・シート仕様</h2>
+            <p class="lead">各画面から呼び出されるダイアログ・ボトムシートの仕様（タイトル・入力・ボタン・文言・バリデーション）。文言は実装に基づく。</p>
+            <table class="spec">
+                <thead><tr><th>ダイアログ / シート</th><th>タイトル</th><th>入力 / 選択</th><th>ボタン（結果）</th><th>文言・バリデーション</th></tr></thead>
+                <tbody>
+                <tr><td class="k">名前変更</td><td>名前変更</td><td>ファイル名（拡張子を除いたベース名・初期値=現在名）</td><td>キャンセル／保存</td><td>「拡張子 .ext は維持されます」。拡張子変更検出時は確認「拡張子は変更されません」→「戻る／続行」</td></tr>
+                <tr><td class="k">削除確認（単一）</td><td>動画を削除</td><td>—</td><td>キャンセル／削除</td><td>「○○ を端末から削除します。」</td></tr>
+                <tr><td class="k">削除確認（複数）</td><td>動画を削除</td><td>—</td><td>キャンセル／削除</td><td>「選択中の○件を端末から削除します。」</td></tr>
+                <tr><td class="k">移動・コピー先選択</td><td>移動先フォルダ／コピー先フォルダ／フォルダ名変更</td><td>フォルダパス入力（自由入力）＋既存フォルダ一覧から選択</td><td>キャンセル／移動・コピー・作成・変更</td><td>フォルダ名の入力ルールに従う（<a href="#validation" class="x">8章</a>参照）。初期値は現在の保存先（または「Movies」）。</td></tr>
+                <tr><td class="k">ファイル競合</td><td>同名ファイルがあります</td><td>—</td><td>キャンセル／スキップ／別名保存（コピー時のみ）／置き換え</td><td>「○件の動画で移動先・コピー先に同名ファイルがあります。処理方法を選択してください。」</td></tr>
+                <tr><td class="k">フォルダ削除</td><td>フォルダ削除</td><td>—</td><td>キャンセル／削除</td><td>「○○ 内の○件の動画を端末から削除します。」</td></tr>
+                <tr><td class="k">プレイリスト作成</td><td>プレイリスト作成</td><td>名前</td><td>キャンセル／作成</td><td>—</td></tr>
+                <tr><td class="k">プレイリスト名変更</td><td>プレイリスト名を変更</td><td>名前（初期=現在名）</td><td>キャンセル／保存</td><td>—</td></tr>
+                <tr><td class="k">プレイリスト追加（シート）</td><td>—（ボトムシート）</td><td>「新しいプレイリスト」＋既存プレイリスト一覧（サブ「○件の動画」）</td><td>項目タップで選択</td><td>追加成功 <span class="msg">○○ に追加しました</span></td></tr>
+                <tr><td class="k">バッチ進捗</td><td>移動中／コピー中／削除中／フォルダ名変更中／フォルダ削除中</td><td>プログレスバー＋「○/○」</td><td>キャンセル</td><td>「アプリを閉じた場合は、完了済みの動画だけを反映し、次回起動時に一覧を再スキャンします。」</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="data">
+            <h2><span class="no">7</span> 画面で扱う情報</h2>
+            <p class="lead">各画面に表示・利用される情報を、利用者から見える形で示す。</p>
+
+            <h3>7.1 動画が持つ情報</h3>
+            <p class="lead">動画詳細画面で確認できる情報。</p>
+            <table class="spec">
+                <thead><tr><th>情報</th><th>内容</th></tr></thead>
+                <tbody>
+                <tr><td class="k">ファイル名</td><td>動画の表示名</td></tr>
+                <tr><td class="k">フォルダ / 保存場所</td><td>所属フォルダ名と保存先</td></tr>
+                <tr><td class="k">形式</td><td>動画の形式（例: video/mp4）</td></tr>
+                <tr><td class="k">再生時間 / サイズ</td><td>再生時間とファイルサイズ</td></tr>
+                <tr><td class="k">解像度 / ビットレート / フレームレート</td><td>画質に関する情報</td></tr>
+                <tr><td class="k">作成日 / 更新日</td><td>ファイルの日時</td></tr>
+                <tr><td class="k">前回再生位置 / 視聴進捗</td><td>前回どこまで観たか</td></tr>
+                <tr><td class="k">タグ</td><td>HDR／360度／スロー／Hyperlapse／DRM／再生不可（該当する属性のみ）</td></tr>
+                <tr><td class="k">再生可否</td><td>アプリ内で再生できるか（不可の場合は理由を表示）</td></tr>
+                </tbody>
+            </table>
+
+            <h3>7.2 フォルダ / プレイリストが持つ情報</h3>
+            <table class="spec">
+                <thead><tr><th>対象</th><th>情報</th></tr></thead>
+                <tbody>
+                <tr><td class="k">フォルダ</td><td>フォルダ名／動画件数／合計サイズ／保存場所／更新日／代表サムネイル</td></tr>
+                <tr><td class="k">プレイリスト</td><td>プレイリスト名／含まれる動画とその順序／動画件数／更新日</td></tr>
+                </tbody>
+            </table>
+
+            <h3>7.3 検索・並び替えで選べる条件</h3>
+            <table class="spec">
+                <thead><tr><th>項目</th><th>選べる値</th></tr></thead>
+                <tbody>
+                <tr><td class="k">検索対象</td><td>すべて／動画名／フォルダ名</td></tr>
+                <tr><td class="k">並び替え</td><td>更新日時（既定）／作成日時／タイトル／再生時間／サイズ</td></tr>
+                <tr><td class="k">並び順</td><td>昇順／降順（既定 降順）</td></tr>
+                </tbody>
+            </table>
+
+            <h3>7.4 権限の状態</h3>
+            <table class="spec">
+                <thead><tr><th>状態</th><th>意味</th><th>画面表示</th></tr></thead>
+                <tbody>
+                <tr><td class="k">許可</td><td>すべての動画にアクセス可</td><td>すべての動画にアクセス可能</td></tr>
+                <tr><td class="k">限定</td><td>選択した動画のみアクセス可</td><td>選択した動画のみアクセス可能</td></tr>
+                <tr><td class="k">拒否</td><td>アクセス不可（権限要求パネルを表示）</td><td>拒否されています</td></tr>
+                <tr><td class="k">不明</td><td>確認中</td><td>不明</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="validation">
+            <h2><span class="no">8</span> 入力規則・バリデーション</h2>
+            <table class="spec">
+                <thead><tr><th>対象</th><th>規則</th><th>エラー文言</th></tr></thead>
+                <tbody>
+                <tr><td class="k">ファイル名</td><td>使えない文字（<code>\ / : * ? " &lt; &gt; |</code>）は不可。空欄不可。拡張子は元のものが維持される。</td><td>「ファイル名を入力してください」／「ファイル名に \ / : * ? " &lt; &gt; | は使えません」／「このファイル名は使えません」</td></tr>
+                <tr><td class="k">フォルダ名 / パス</td><td>使えない文字（<code>\ : * ? " &lt; &gt; |</code>）は不可（「/」は階層の区切りとして使用可）。空欄不可。</td><td>「フォルダを入力してください」／「フォルダ名に \ : * ? " &lt; &gt; | は使えません」／「このフォルダ名は使えません」</td></tr>
+                <tr><td class="k">同名の重複</td><td>同じフォルダ内に同名の動画があると検知。コピー時は自動的に別名（例:「名前 (copy)」「名前 (2)」…）を付ける。</td><td>「同じフォルダに同名の動画があります」／「移動先に同名の動画が○件あります」</td></tr>
+                <tr><td class="k">競合時の選択</td><td>移動／コピー先に同名がある場合の選択。<b>スキップ</b>＝処理しない／<b>別名保存</b>＝別名で保存（コピー時のみ）／<b>置き換え</b>＝既存を上書き。</td><td>—</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="messages">
+            <h2><span class="no">9</span> フィードバック文言一覧</h2>
+            <p class="lead">操作完了時に表示されるトースト通知の文言。<span class="msg">緑</span>は成功、赤は失敗を表す。</p>
+            <table class="spec">
+                <thead><tr><th>操作</th><th>成功</th><th>失敗</th><th>キャンセル（バッチ）</th></tr></thead>
+                <tbody>
+                <tr><td class="k">共有</td><td>—</td><td>共有できませんでした: …</td><td>—</td></tr>
+                <tr><td class="k">移動（単一/バッチ）</td><td>移動しました／移動が完了しました（○件完了 / ○件スキップ / ○件失敗）</td><td>移動できませんでした: …</td><td>移動をキャンセルしました（…）</td></tr>
+                <tr><td class="k">コピー（単一/バッチ）</td><td>コピーしました／コピーが完了しました（…）</td><td>コピーできませんでした: …</td><td>コピーをキャンセルしました（…）</td></tr>
+                <tr><td class="k">削除（単一/バッチ）</td><td>削除しました／削除しました（○件完了 / ○件失敗）</td><td>削除できませんでした: …</td><td>削除をキャンセルしました（…）</td></tr>
+                <tr><td class="k">名前変更</td><td>名前を変更しました</td><td>名前変更できませんでした: …</td><td>—</td></tr>
+                <tr><td class="k">フォルダ名変更</td><td>フォルダ内の動画を移動しました（…）</td><td>フォルダ名変更できませんでした: …</td><td>フォルダ名変更をキャンセルしました（…）</td></tr>
+                <tr><td class="k">フォルダ削除</td><td>フォルダ内の動画を削除しました（…）</td><td>フォルダ削除できませんでした: …</td><td>フォルダ削除をキャンセルしました（…）</td></tr>
+                <tr><td class="k">プレイリスト追加/削除</td><td>○○ に追加しました／○○ をリストから削除しました</td><td>—</td><td>—</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="appendix">
+            <h2><span class="no">付</span> 権限・前提（要約）</h2>
+            <h3>アプリが求める権限</h3>
+            <table class="spec">
+                <thead><tr><th>権限 / 機能</th><th>用途</th><th>必須度</th></tr></thead>
+                <tbody>
+                <tr><td class="k">動画へのアクセス許可</td><td>端末内の動画を一覧表示する。「選択した動画のみ」の限定許可にも対応。</td><td>必須</td></tr>
+                <tr><td class="k">動画の変更・削除の許可</td><td>削除・名称変更・移動・コピーの実行（操作時に端末の確認が表示される場合あり）。</td><td>必須</td></tr>
+                <tr><td class="k">共有</td><td>選択した外部アプリへ動画を共有（ユーザー操作時のみ）。</td><td>必須</td></tr>
+                </tbody>
+            </table>
+            <h3>前提・方針</h3>
+            <table class="spec">
+                <thead><tr><th>区分</th><th>内容</th></tr></thead>
+                <tbody>
+                <tr><td class="k">表示速度</td><td>大量の動画でも素早く一覧を表示。サムネイルは順次読み込む。</td></tr>
+                <tr><td class="k">プライバシー</td><td>動画の情報を外部へ送信しない。共有はユーザー操作時のみ実行する。</td></tr>
+                <tr><td class="k">安定性</td><td>ファイル操作中の削除やSDカード取り外し、サムネ取得失敗があっても動作を継続する。</td></tr>
+                <tr><td class="k">使いやすさ</td><td>主要操作は少ないタップで完了。破壊的操作には確認を入れる。主要アクションは下部にも配置。</td></tr>
+                </tbody>
+            </table>
+            <p class="lead" style="margin-top:24px;border-top:1px solid var(--doc-line);padding-top:16px">本書の画面イメージは One UI ダークモードのデザインを HTML/CSS で再現したもの。各画面の表示・操作・振る舞いはアプリの実挙動に基づく。— v1.0 / 2026-06-15</p>
+        </section>
+
+    </main>
+</div>
+
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad:true, securityLevel:'loose' });
+</script>
+</body>
+</html>

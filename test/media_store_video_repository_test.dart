@@ -119,6 +119,45 @@ void main() {
     expect(await repository.watchVideos(const VideoQuery()).first, isEmpty);
     expect(await database.getVideoIndexEntries(), isEmpty);
   });
+
+  test('codec metadata survives refresh and database cache restore', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    final firstRepository = _repository(
+      mediaStore: _FakeMediaStoreAdapter([
+        _dto(
+          videoCodec: 'video/avc',
+          audioCodec: 'audio/mp4a-latm',
+          audioChannelCount: 2,
+        ),
+      ]),
+      database: database,
+    );
+
+    await firstRepository.refreshIndex();
+    final refreshed =
+        (await firstRepository.watchVideos(const VideoQuery()).first).single;
+    expect(refreshed.videoCodec, 'video/avc');
+    expect(refreshed.audioCodec, 'audio/mp4a-latm');
+    expect(refreshed.audioChannelCount, 2);
+    final cachedRepository = _repository(
+      mediaStore: _FakeMediaStoreAdapter([
+        _dto(
+          videoCodec: 'video/avc',
+          audioCodec: 'audio/mp4a-latm',
+          audioChannelCount: 2,
+        ),
+      ]),
+      database: database,
+    );
+    addTearDown(firstRepository.dispose);
+    addTearDown(cachedRepository.dispose);
+    final cached =
+        (await cachedRepository.watchVideos(const VideoQuery()).first).single;
+    expect(cached.videoCodec, 'video/avc');
+    expect(cached.audioCodec, 'audio/mp4a-latm');
+    expect(cached.audioChannelCount, 2);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  });
 }
 
 MediaStoreVideoRepository _repository({
@@ -142,6 +181,9 @@ MediaStoreVideoDto _dto({
   String relativePath = 'Download/',
   String folderId = 'download',
   String folderName = 'Download',
+  String? videoCodec,
+  String? audioCodec,
+  int? audioChannelCount,
 }) {
   return MediaStoreVideoDto(
     mediaStoreId: mediaStoreId,
@@ -155,6 +197,9 @@ MediaStoreVideoDto _dto({
     sizeBytes: 49962,
     modifiedAtMs: DateTime(2026, 6, 14).millisecondsSinceEpoch,
     isPlayable: true,
+    videoCodec: videoCodec,
+    audioCodec: audioCodec,
+    audioChannelCount: audioChannelCount,
   );
 }
 

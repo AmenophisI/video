@@ -17,6 +17,8 @@ abstract interface class VideoRepository {
 
   Future<void> shareVideos(List<String> videoIds);
 
+  Future<void> moveToSecureFolder(List<String> videoIds);
+
   Future<void> openVideoInEditor(String videoId);
 
   Future<void> openVideoInExternalPlayer(String videoId);

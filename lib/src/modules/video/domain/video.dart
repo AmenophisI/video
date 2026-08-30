@@ -15,6 +15,9 @@ class Video {
     this.rotationDegrees,
     this.bitrate,
     this.frameRate,
+    this.videoCodec,
+    this.audioCodec,
+    this.audioChannelCount,
     this.createdAt,
     this.modifiedAt,
     this.thumbnailUri,
@@ -46,6 +49,9 @@ class Video {
   final int? rotationDegrees;
   final int? bitrate;
   final double? frameRate;
+  final String? videoCodec;
+  final String? audioCodec;
+  final int? audioChannelCount;
   final DateTime? createdAt;
   final DateTime? modifiedAt;
   final Uri? thumbnailUri;
@@ -125,6 +131,9 @@ class Video {
       rotationDegrees: rotationDegrees,
       bitrate: bitrate,
       frameRate: frameRate,
+      videoCodec: videoCodec,
+      audioCodec: audioCodec,
+      audioChannelCount: audioChannelCount,
       createdAt: createdAt,
       modifiedAt: modifiedAt,
       thumbnailUri: thumbnailUri,

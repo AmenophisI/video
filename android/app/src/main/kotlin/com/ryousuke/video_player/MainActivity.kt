@@ -1,17 +1,21 @@
 package com.ryousuke.video_player
 
 import android.app.Activity
+import android.app.PictureInPictureParams
 import android.app.RecoverableSecurityException
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -20,20 +24,29 @@ import android.os.Looper
 import android.os.StatFs
 import android.provider.MediaStore
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.util.Size
+import android.util.Rational
+import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executors
+import kotlin.math.roundToInt
 
 class MainActivity : FlutterFragmentActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
     private var pendingDeleteResult: MethodChannel.Result? = null
     private var pendingWriteResult: MethodChannel.Result? = null
+    private var pendingVoiceSearchResult: MethodChannel.Result? = null
     private var pendingWriteOperation: PendingWriteOperation? = null
     private var mediaStoreChannel: MethodChannel? = null
+    private var systemChannel: MethodChannel? = null
     private var mediaStoreObserver: ContentObserver? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val thumbnailExecutor = Executors.newFixedThreadPool(2)
@@ -56,6 +69,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "loadThumbnail" -> loadThumbnailAsync(call.arguments, result)
                 "shareVideo" -> shareVideo(call.arguments, result)
                 "shareVideos" -> shareVideos(call.arguments, result)
+                "moveToSecureFolder" -> moveToSecureFolder(call.arguments, result)
                 "openEditor" -> openEditor(call.arguments, result)
                 "openExternalPlayer" -> openExternalPlayer(call.arguments, result)
                 "deleteVideo" -> deleteVideo(call.arguments, result)
@@ -64,6 +78,26 @@ class MainActivity : FlutterFragmentActivity() {
                 "moveVideo" -> moveVideo(call.arguments, result)
                 "copyVideo" -> copyVideo(call.arguments, result)
                 "createFolder" -> createFolder(call.arguments, result)
+                else -> result.notImplemented()
+            }
+        }
+        systemChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            SYSTEM_CHANNEL_NAME
+        )
+        systemChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "enterPictureInPicture" -> enterPlayerPictureInPicture(result)
+                "openCastSettings" -> openCastSettings(result)
+                "captureFrame" -> captureFrame(call.arguments, result)
+                "extractFrames" -> extractFrames(call.arguments, result)
+                "saveGif" -> saveGif(call.arguments, result)
+                "shareGif" -> shareGif(call.arguments, result)
+                "startVoiceSearch" -> startVoiceSearch(result)
+                "setScreenBrightness" -> setScreenBrightness(call.arguments, result)
+                "resetScreenBrightness" -> resetScreenBrightness(result)
+                "getMediaVolume" -> getMediaVolume(result)
+                "setMediaVolume" -> setMediaVolume(call.arguments, result)
                 else -> result.notImplemented()
             }
         }
@@ -83,8 +117,324 @@ class MainActivity : FlutterFragmentActivity() {
         mediaStoreObserver = null
         mediaStoreChannel?.setMethodCallHandler(null)
         mediaStoreChannel = null
+        systemChannel?.setMethodCallHandler(null)
+        systemChannel = null
         thumbnailExecutor.shutdownNow()
         super.onDestroy()
+    }
+
+    private fun enterPlayerPictureInPicture(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            result.error("pip_unavailable", "Picture-in-picture is unavailable.", null)
+            return
+        }
+
+        try {
+            val params = PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(16, 9))
+                .build()
+            if (enterPictureInPictureMode(params)) {
+                result.success(null)
+            } else {
+                result.error("pip_failed", "Picture-in-picture could not be started.", null)
+            }
+        } catch (error: Exception) {
+            result.error("pip_failed", error.message, null)
+        }
+    }
+
+    private fun openCastSettings(result: MethodChannel.Result) {
+        try {
+            startActivity(Intent(Settings.ACTION_CAST_SETTINGS))
+            result.success(null)
+        } catch (error: Exception) {
+            result.error("cast_settings_failed", error.message, null)
+        }
+    }
+
+    private fun setScreenBrightness(arguments: Any?, result: MethodChannel.Result) {
+        val brightness = (arguments as? Number)?.toFloat()
+        if (brightness == null) {
+            result.error("invalid_arguments", "brightness is required.", null)
+            return
+        }
+        window.attributes = window.attributes.apply {
+            screenBrightness = brightness.coerceIn(0.01f, 1f)
+        }
+        result.success(null)
+    }
+
+    private fun resetScreenBrightness(result: MethodChannel.Result) {
+        window.attributes = window.attributes.apply {
+            screenBrightness = -1f
+        }
+        result.success(null)
+    }
+
+    private fun getMediaVolume(result: MethodChannel.Result) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val minimum = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        } else {
+            0
+        }
+        val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val range = (maximum - minimum).coerceAtLeast(1)
+        result.success((current - minimum).toDouble() / range.toDouble())
+    }
+
+    private fun setMediaVolume(arguments: Any?, result: MethodChannel.Result) {
+        val normalizedVolume = (arguments as? Number)?.toDouble()
+        if (normalizedVolume == null) {
+            result.error("invalid_arguments", "volume is required.", null)
+            return
+        }
+
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val minimum = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        } else {
+            0
+        }
+        val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val volume = minimum +
+            ((maximum - minimum) * normalizedVolume.coerceIn(0.0, 1.0)).roundToInt()
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
+        result.success(null)
+    }
+
+    private fun startVoiceSearch(result: MethodChannel.Result) {
+        if (pendingVoiceSearchResult != null) {
+            result.error("voice_search_in_progress", "Voice search is already open.", null)
+            return
+        }
+        try {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "動画を検索")
+            }
+            pendingVoiceSearchResult = result
+            startActivityForResult(intent, VOICE_SEARCH_REQUEST_CODE)
+        } catch (error: Exception) {
+            pendingVoiceSearchResult = null
+            result.error("voice_search_unavailable", error.message, null)
+        }
+    }
+
+    private fun captureFrame(arguments: Any?, result: MethodChannel.Result) {
+        val params = arguments as? Map<*, *>
+        val uriText = params?.get("uri") as? String
+        val positionMs = (params?.get("positionMs") as? Number)?.toLong() ?: 0L
+        if (uriText.isNullOrBlank()) {
+            result.error("invalid_arguments", "uri is required.", null)
+            return
+        }
+
+        thumbnailExecutor.execute {
+            var bitmap: Bitmap? = null
+            try {
+                val retriever = MediaMetadataRetriever()
+                bitmap = try {
+                    retriever.setDataSource(this, Uri.parse(uriText))
+                    retriever.getFrameAtTime(
+                        positionMs.coerceAtLeast(0L) * 1000L,
+                        MediaMetadataRetriever.OPTION_CLOSEST
+                    )
+                } finally {
+                    retriever.release()
+                }
+
+                if (bitmap == null) {
+                    mainHandler.post {
+                        result.error("capture_failed", "The frame could not be decoded.", null)
+                    }
+                    return@execute
+                }
+
+                val name = "VideoCapture_" + SimpleDateFormat(
+                    "yyyyMMdd_HHmmss",
+                    Locale.US
+                ).format(Date()) + ".jpg"
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Video captures")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                }
+                val outputUri = contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    values
+                ) ?: throw IllegalStateException("MediaStore insert failed.")
+                contentResolver.openOutputStream(outputUri)?.use { stream ->
+                    if (!bitmap!!.compress(Bitmap.CompressFormat.JPEG, 95, stream)) {
+                        throw IllegalStateException("JPEG encoding failed.")
+                    }
+                } ?: throw IllegalStateException("Output stream unavailable.")
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    contentResolver.update(
+                        outputUri,
+                        ContentValues().apply {
+                            put(MediaStore.Images.Media.IS_PENDING, 0)
+                        },
+                        null,
+                        null
+                    )
+                }
+                mainHandler.post { result.success(outputUri.toString()) }
+            } catch (error: Exception) {
+                mainHandler.post { result.error("capture_failed", error.message, null) }
+            } finally {
+                bitmap?.recycle()
+            }
+        }
+    }
+
+    private fun extractFrames(arguments: Any?, result: MethodChannel.Result) {
+        val params = arguments as? Map<*, *>
+        val uriText = params?.get("uri") as? String
+        val startMs = (params?.get("startMs") as? Number)?.toLong() ?: 0L
+        val durationMs = (params?.get("durationMs") as? Number)?.toLong() ?: 4_000L
+        val frameCount = ((params?.get("frameCount") as? Number)?.toInt() ?: 12)
+            .coerceIn(2, 24)
+        if (uriText.isNullOrBlank()) {
+            result.error("invalid_arguments", "uri is required.", null)
+            return
+        }
+
+        thumbnailExecutor.execute {
+            val frames = ArrayList<ByteArray>(frameCount)
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(this, Uri.parse(uriText))
+                for (index in 0 until frameCount) {
+                    val fraction = index.toDouble() / (frameCount - 1)
+                    val frameTimeMs = startMs.coerceAtLeast(0L) +
+                        (durationMs.coerceAtLeast(200L) * fraction).toLong()
+                    val frame = retriever.getFrameAtTime(
+                        frameTimeMs * 1000L,
+                        MediaMetadataRetriever.OPTION_CLOSEST
+                    ) ?: continue
+                    val scaled = if (frame.width > GIF_FRAME_MAX_WIDTH) {
+                        val height = (frame.height * GIF_FRAME_MAX_WIDTH.toDouble() / frame.width)
+                            .toInt()
+                            .coerceAtLeast(1)
+                        Bitmap.createScaledBitmap(frame, GIF_FRAME_MAX_WIDTH, height, true)
+                    } else {
+                        frame
+                    }
+                    val output = ByteArrayOutputStream()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, GIF_FRAME_QUALITY, output)
+                    frames.add(output.toByteArray())
+                    output.close()
+                    if (scaled !== frame) {
+                        scaled.recycle()
+                    }
+                    frame.recycle()
+                }
+                mainHandler.post {
+                    if (frames.isEmpty()) {
+                        result.error("frame_extraction_failed", "No video frames were decoded.", null)
+                    } else {
+                        result.success(frames)
+                    }
+                }
+            } catch (error: Exception) {
+                mainHandler.post {
+                    result.error("frame_extraction_failed", error.message, null)
+                }
+            } finally {
+                retriever.release()
+            }
+        }
+    }
+
+    private fun saveGif(arguments: Any?, result: MethodChannel.Result) {
+        val bytes = arguments as? ByteArray
+        if (bytes == null || bytes.isEmpty()) {
+            result.error("invalid_arguments", "GIF bytes are required.", null)
+            return
+        }
+
+        thumbnailExecutor.execute {
+            var outputUri: Uri? = null
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, newGifDisplayName())
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/gif")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GIF")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                }
+                outputUri = contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    values
+                ) ?: throw IllegalStateException("MediaStore insert failed.")
+                contentResolver.openOutputStream(outputUri!!)?.use { stream ->
+                    stream.write(bytes)
+                } ?: throw IllegalStateException("Output stream unavailable.")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    contentResolver.update(
+                        outputUri!!,
+                        ContentValues().apply {
+                            put(MediaStore.Images.Media.IS_PENDING, 0)
+                        },
+                        null,
+                        null
+                    )
+                }
+                val savedUri = outputUri.toString()
+                mainHandler.post { result.success(savedUri) }
+            } catch (error: Exception) {
+                outputUri?.let { contentResolver.delete(it, null, null) }
+                mainHandler.post { result.error("gif_save_failed", error.message, null) }
+            }
+        }
+    }
+
+    private fun shareGif(arguments: Any?, result: MethodChannel.Result) {
+        val bytes = arguments as? ByteArray
+        if (bytes == null || bytes.isEmpty()) {
+            result.error("invalid_arguments", "GIF bytes are required.", null)
+            return
+        }
+
+        try {
+            val shareDirectory = File(cacheDir, "shared_gif").apply { mkdirs() }
+            shareDirectory.listFiles()?.forEach { it.delete() }
+            val gifFile = File(shareDirectory, newGifDisplayName()).apply {
+                writeBytes(bytes)
+            }
+            val uri = FileProvider.getUriForFile(
+                this,
+                "$packageName.file_provider",
+                gifFile
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/gif"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "GIFを共有"))
+            result.success(null)
+        } catch (error: Exception) {
+            result.error("gif_share_failed", error.message, null)
+        }
+    }
+
+    private fun newGifDisplayName(): String {
+        return "VideoGIF_" + SimpleDateFormat(
+            "yyyyMMdd_HHmmss",
+            Locale.US
+        ).format(Date()) + ".gif"
     }
 
     private fun requestVideoPermission(result: MethodChannel.Result) {
@@ -158,6 +508,15 @@ class MainActivity : FlutterFragmentActivity() {
                 pendingDeleteResult?.error("delete_cancelled", "Delete was cancelled.", null)
             }
             pendingDeleteResult = null
+        } else if (requestCode == VOICE_SEARCH_REQUEST_CODE) {
+            val result = pendingVoiceSearchResult
+            pendingVoiceSearchResult = null
+            if (resultCode == Activity.RESULT_OK) {
+                val matches = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                result?.success(matches?.firstOrNull())
+            } else {
+                result?.success(null)
+            }
         } else if (requestCode == WRITE_REQUEST_CODE) {
             val operation = pendingWriteOperation
             val result = pendingWriteResult
@@ -363,6 +722,9 @@ class MainActivity : FlutterFragmentActivity() {
                             "rotationDegrees" to metadata.rotationDegrees,
                             "bitrate" to metadata.bitrate,
                             "frameRate" to metadata.frameRate,
+                            "videoCodec" to metadata.videoCodec,
+                            "audioCodec" to metadata.audioCodec,
+                            "audioChannelCount" to metadata.audioChannelCount,
                             "metadataText" to metadata.metadataText,
                             "subtitleUri" to subtitleUri?.toString(),
                             "isHdr" to metadata.isHdr,
@@ -599,6 +961,54 @@ class MainActivity : FlutterFragmentActivity() {
             result.success(null)
         } catch (error: Exception) {
             result.error("share_failed", error.message, null)
+        }
+    }
+
+    private fun moveToSecureFolder(arguments: Any?, result: MethodChannel.Result) {
+        val params = arguments as? Map<*, *>
+        val uriTexts = params?.get("uris") as? List<*>
+        val uris = uriTexts
+            ?.mapNotNull { (it as? String)?.let(Uri::parse) }
+            ?.takeIf { it.isNotEmpty() }
+        if (uris == null) {
+            result.error("invalid_arguments", "uris are required.", null)
+            return
+        }
+
+        val intent = Intent("com.sec.knox.action.storeData").apply {
+            type = "video/*"
+            addCategory(Intent.CATEGORY_DEFAULT)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (uris.size == 1) {
+                data = uris.single()
+                putExtra(Intent.EXTRA_STREAM, uris.single())
+            } else {
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            }
+            clipData = android.content.ClipData.newUri(
+                contentResolver,
+                "videos",
+                uris.first()
+            ).also { clip ->
+                uris.drop(1).forEach { uri ->
+                    clip.addItem(android.content.ClipData.Item(uri))
+                }
+            }
+        }
+
+        try {
+            if (intent.resolveActivity(packageManager) == null) {
+                result.error(
+                    "secure_folder_unavailable",
+                    "Secure Folder is unavailable.",
+                    null
+                )
+                return
+            }
+            startActivity(intent)
+            result.success(null)
+        } catch (error: Exception) {
+            result.error("secure_folder_unavailable", error.message, null)
         }
     }
 
@@ -1024,6 +1434,7 @@ class MainActivity : FlutterFragmentActivity() {
         val retriever = MediaMetadataRetriever()
         return try {
             retriever.setDataSource(this, uri)
+            val trackMetadata = readTrackMetadata(uri)
             val duration = retriever.extractIntMetadata(
                 MediaMetadataRetriever.METADATA_KEY_DURATION
             )
@@ -1064,6 +1475,9 @@ class MainActivity : FlutterFragmentActivity() {
                 } else {
                     null
                 },
+                videoCodec = trackMetadata.videoCodec,
+                audioCodec = trackMetadata.audioCodec,
+                audioChannelCount = trackMetadata.audioChannelCount,
                 metadataText = metadataText,
                 isHdr = colorTransfer == MediaFormat.COLOR_TRANSFER_ST2084 ||
                     colorTransfer == MediaFormat.COLOR_TRANSFER_HLG ||
@@ -1076,6 +1490,42 @@ class MainActivity : FlutterFragmentActivity() {
             VideoMetadata(isPlayable = false)
         } finally {
             retriever.release()
+        }
+    }
+
+    private fun readTrackMetadata(uri: Uri): TrackMetadata {
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(this, uri, null)
+            var videoCodec: String? = null
+            var audioCodec: String? = null
+            var audioChannelCount: Int? = null
+            for (index in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(index)
+                val mimeType = format.getString(MediaFormat.KEY_MIME)
+                when {
+                    mimeType?.startsWith("video/") == true && videoCodec == null -> {
+                        videoCodec = mimeType
+                    }
+                    mimeType?.startsWith("audio/") == true && audioCodec == null -> {
+                        audioCodec = mimeType
+                        if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
+                            audioChannelCount = format.getInteger(
+                                MediaFormat.KEY_CHANNEL_COUNT
+                            )
+                        }
+                    }
+                }
+            }
+            TrackMetadata(
+                videoCodec = videoCodec,
+                audioCodec = audioCodec,
+                audioChannelCount = audioChannelCount
+            )
+        } catch (_: Exception) {
+            TrackMetadata()
+        } finally {
+            extractor.release()
         }
     }
 
@@ -1101,11 +1551,15 @@ class MainActivity : FlutterFragmentActivity() {
 
     private companion object {
         const val CHANNEL_NAME = "video_player/media_store"
+        const val SYSTEM_CHANNEL_NAME = "video_player/system"
         const val ANDROID_VIDEO_VIEW_TYPE = "video_player/android_video_view"
         const val VIDEO_PERMISSION_REQUEST_CODE = 3711
         const val DELETE_REQUEST_CODE = 3712
         const val WRITE_REQUEST_CODE = 3713
+        const val VOICE_SEARCH_REQUEST_CODE = 3714
         const val THUMBNAIL_QUALITY = 85
+        const val GIF_FRAME_MAX_WIDTH = 640
+        const val GIF_FRAME_QUALITY = 82
 
         const val READ_EXTERNAL_STORAGE = "android.permission.READ_EXTERNAL_STORAGE"
         const val READ_MEDIA_VIDEO = "android.permission.READ_MEDIA_VIDEO"
@@ -1135,8 +1589,17 @@ private data class VideoMetadata(
     val rotationDegrees: Int? = null,
     val bitrate: Int? = null,
     val frameRate: Double? = null,
+    val videoCodec: String? = null,
+    val audioCodec: String? = null,
+    val audioChannelCount: Int? = null,
     val metadataText: String? = null,
     val isHdr: Boolean = false,
     val isDrm: Boolean = false,
     val isPlayable: Boolean = true
+)
+
+private data class TrackMetadata(
+    val videoCodec: String? = null,
+    val audioCodec: String? = null,
+    val audioChannelCount: Int? = null
 )

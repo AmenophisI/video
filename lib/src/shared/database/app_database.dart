@@ -23,6 +23,9 @@ class VideoIndexEntries extends Table {
   IntColumn get rotationDegrees => integer().nullable()();
   IntColumn get bitrate => integer().nullable()();
   RealColumn get frameRate => real().nullable()();
+  TextColumn get videoCodec => text().nullable()();
+  TextColumn get audioCodec => text().nullable()();
+  IntColumn get audioChannelCount => integer().nullable()();
   TextColumn get subtitleUri => text().nullable()();
   IntColumn get createdAtMs => integer().nullable()();
   IntColumn get modifiedAtMs => integer().nullable()();
@@ -48,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -58,6 +61,20 @@ class AppDatabase extends _$AppDatabase {
           await migrator.addColumn(
             videoIndexEntries,
             videoIndexEntries.isHyperlapse,
+          );
+        }
+        if (from < 3) {
+          await migrator.addColumn(
+            videoIndexEntries,
+            videoIndexEntries.videoCodec,
+          );
+          await migrator.addColumn(
+            videoIndexEntries,
+            videoIndexEntries.audioCodec,
+          );
+          await migrator.addColumn(
+            videoIndexEntries,
+            videoIndexEntries.audioChannelCount,
           );
         }
       },

@@ -47,12 +47,13 @@ class _QuickPreviewSheetState extends ConsumerState<QuickPreviewSheet> {
     if (!widget.video.isPlayable) {
       return SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const _SheetHandle(),
+              const SizedBox(height: 20),
               const Icon(Icons.error_outline, size: 48),
               const SizedBox(height: 12),
               Text(
@@ -100,15 +101,17 @@ class _QuickPreviewSheetState extends ConsumerState<QuickPreviewSheet> {
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const _SheetHandle(),
+            const SizedBox(height: 12),
             AspectRatio(
               aspectRatio: 16 / 9,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
                 child: NativeVideoPlayerView(
                   controller: _controller,
                   uri: widget.video.uri,
@@ -253,5 +256,23 @@ class _QuickPreviewSheetState extends ConsumerState<QuickPreviewSheet> {
           videoId: widget.video.id,
           position: position,
         );
+  }
+}
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 34,
+        height: 5,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
   }
 }

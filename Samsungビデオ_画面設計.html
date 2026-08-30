@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Samsung「ビデオ」実機画面設計書</title>
+  <style>
+    :root {
+      --bg: #08101a;
+      --surface: #101a27;
+      --surface-2: #172333;
+      --surface-3: #223044;
+      --line: #2e4158;
+      --text: #eef5ff;
+      --muted: #a8b7c9;
+      --blue: #2f8cff;
+      --cyan: #5fd5ff;
+      --green: #48d597;
+      --amber: #ffca62;
+      --red: #ff7070;
+      --unobserved: #aa89ff;
+      --radius: 20px;
+      --shadow: 0 18px 60px rgba(0,0,0,.28);
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 12% -10%, rgba(47,140,255,.18), transparent 34rem),
+        radial-gradient(circle at 88% 18%, rgba(95,213,255,.09), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.72;
+    }
+    a { color: var(--cyan); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; color: #d5e8ff; }
+    h1, h2, h3, h4 { line-height: 1.28; margin: 0; letter-spacing: .01em; }
+    h2 { font-size: clamp(1.5rem, 3vw, 2.15rem); }
+    h3 { font-size: 1.18rem; }
+    p { margin: .65rem 0 0; }
+    ul, ol { margin: .6rem 0 0; padding-left: 1.35rem; }
+    li + li { margin-top: .28rem; }
+    .hero {
+      min-height: 440px;
+      display: grid;
+      place-items: center;
+      padding: 72px 28px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(150deg, rgba(19,32,48,.94), rgba(7,13,22,.76));
+    }
+    .hero-inner { width: min(1120px, 100%); }
+    .eyebrow {
+      display: inline-flex; gap: 8px; align-items: center;
+      padding: 8px 13px; border: 1px solid rgba(95,213,255,.34);
+      border-radius: 999px; color: var(--cyan); background: rgba(95,213,255,.07);
+      font-size: .78rem; font-weight: 800; letter-spacing: .12em;
+    }
+    .hero h1 { margin-top: 22px; font-size: clamp(2.15rem, 7vw, 4.7rem); max-width: 950px; }
+    .lead { max-width: 870px; font-size: clamp(1rem, 2vw, 1.22rem); color: var(--muted); margin-top: 20px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 26px; }
+    .badge, .status {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 999px; border: 1px solid var(--line);
+      padding: 6px 10px; font-size: .76rem; font-weight: 750;
+      background: rgba(255,255,255,.035);
+    }
+    .badge strong { color: white; }
+    .layout { width: min(1480px, 100%); margin: 0 auto; display: grid; grid-template-columns: 260px minmax(0,1fr); gap: 34px; padding: 38px 28px 100px; }
+    .toc { position: sticky; top: 22px; align-self: start; max-height: calc(100vh - 44px); overflow: auto; padding: 18px; background: rgba(16,26,39,.82); border: 1px solid var(--line); border-radius: 18px; backdrop-filter: blur(16px); }
+    .toc b { font-size: .82rem; color: var(--muted); letter-spacing: .08em; }
+    .toc a { display: block; color: #c9d6e7; text-decoration: none; padding: 7px 8px; border-radius: 8px; font-size: .88rem; }
+    .toc a:hover { background: var(--surface-3); color: white; }
+    main { min-width: 0; }
+    section { margin-top: 74px; }
+    section:first-child { margin-top: 0; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
+    .section-head p { max-width: 720px; color: var(--muted); font-size: .94rem; }
+    .grid { display: grid; gap: 16px; margin-top: 20px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .card { min-width: 0; background: linear-gradient(145deg, rgba(23,35,51,.95), rgba(14,23,34,.94)); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+    .card h3 { margin-bottom: 6px; }
+    .metric { font-size: 1.55rem; font-weight: 850; }
+    .muted { color: var(--muted); }
+    .callout { border-left: 4px solid var(--blue); padding: 15px 18px; background: rgba(47,140,255,.08); border-radius: 0 14px 14px 0; margin-top: 20px; }
+    .callout.warn { border-left-color: var(--amber); background: rgba(255,202,98,.08); }
+    .callout.danger { border-left-color: var(--red); background: rgba(255,112,112,.08); }
+    .table-wrap { min-width: 0; max-width: 100%; overflow: auto; margin-top: 18px; border: 1px solid var(--line); border-radius: 16px; background: rgba(10,17,27,.72); }
+    table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: .88rem; }
+    th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(46,65,88,.72); }
+    th { position: sticky; top: 0; background: #182536; color: #eaf3ff; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    .status.observed { color: #b9f7d8; border-color: rgba(72,213,151,.38); background: rgba(72,213,151,.1); }
+    .status.boundary { color: #ffe0a0; border-color: rgba(255,202,98,.38); background: rgba(255,202,98,.1); }
+    .status.unobserved { color: #d9c8ff; border-color: rgba(170,137,255,.42); background: rgba(170,137,255,.1); }
+    .status.restored { color: #bfe5ff; border-color: rgba(95,213,255,.38); background: rgba(95,213,255,.1); }
+    .flow-scroll { min-width: 0; max-width: 100%; overflow-x: auto; margin-top: 20px; border: 1px solid var(--line); border-radius: 18px; background: #09111c; }
+    .flow-scroll svg { display: block; min-width: 1040px; width: 100%; height: auto; }
+    .legend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; font-size: .8rem; color: var(--muted); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .tokens { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+    .swatch { min-height: 112px; border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: end; }
+    .screens { display: grid; gap: 24px; margin-top: 24px; }
+    .screen-card { min-width: 0; background: rgba(14,22,33,.94); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); }
+    .screen-card header { display: flex; justify-content: space-between; gap: 18px; align-items: start; padding: 22px 24px 18px; border-bottom: 1px solid var(--line); }
+    .screen-card header .id { color: var(--cyan); font: 800 .78rem ui-monospace, SFMono-Regular, monospace; letter-spacing: .08em; }
+    .screen-card header h3 { margin-top: 4px; }
+    .screen-body { display: grid; grid-template-columns: minmax(230px, .7fr) minmax(260px,.8fr) minmax(340px,1.5fr); gap: 20px; padding: 22px; }
+    .shot { margin: 0; }
+    .shot img { width: 100%; max-height: 590px; object-fit: contain; object-position: top; display: block; border: 1px solid var(--line); border-radius: 16px; background: #000; }
+    .shot.land img { max-height: 360px; }
+    figcaption { color: var(--muted); font-size: .76rem; margin-top: 8px; }
+    .wire { min-height: 360px; border: 1px solid #435570; border-radius: 17px; padding: 13px; background: #080d14; display: flex; flex-direction: column; gap: 10px; }
+    .wire-top { height: 42px; border: 1px solid #536880; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: #dce8f7; font-size: .78rem; }
+    .wire-content { flex: 1; display: grid; gap: 9px; align-content: start; padding: 8px 2px; }
+    .wire-row { height: 50px; border: 1px dashed #40536b; border-radius: 10px; background: linear-gradient(90deg,#1d2a3b 30%,#131e2b 30%); }
+    .wire-row:nth-child(2) { opacity: .84; }
+    .wire-row:nth-child(3) { opacity: .68; }
+    .wire-grid { grid-template-columns: repeat(2,1fr); }
+    .wire-grid .wire-row { height: 112px; background: #1d2a3b; }
+    .wire-panel { margin-top: auto; min-height: 145px; border-radius: 18px; background: #27364a; padding: 18px; display: grid; gap: 10px; }
+    .wire-line { height: 9px; width: 78%; background: #7185a0; border-radius: 99px; }
+    .wire-line.short { width: 44%; }
+    .wire-actions { display: flex; gap: 9px; justify-content: end; margin-top: auto; }
+    .wire-actions i { width: 72px; height: 28px; border-radius: 8px; border: 1px solid var(--blue); }
+    .wire-player { flex: 1; border: 1px dashed #4c607a; background: #202b3a; display: flex; flex-direction: column; justify-content: space-between; padding: 14px; color: var(--muted); font-size: .72rem; }
+    .wire-controls { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 2px solid #8395aa; color: white; }
+    .sg-screen { flex: 1; min-height: 334px; overflow: hidden; border-radius: 12px; background: #000; color: #f5f5f5; font-size: .7rem; line-height: 1.35; display: flex; flex-direction: column; }
+    .sg-player-shell { flex: 1; margin-top: 12px; overflow: hidden; border: 1px solid #5d636d; border-radius: 8px; background: #292d35; display: flex; flex-direction: column; }
+    .sg-player-head, .sg-player-tools, .sg-player-quick, .sg-player-time, .sg-player-transport { display: flex; align-items: center; }
+    .sg-player-head { min-height: 38px; gap: 9px; padding: 6px 11px; }
+    .sg-player-head strong { margin-right: auto; max-width: 44%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 500; }
+    .sg-player-head span, .sg-player-tools span, .sg-player-quick span, .sg-player-transport span { white-space: nowrap; }
+    .sg-player-tools { justify-content: space-between; padding: 4px 11px; }
+    .sg-video-mask { flex: 1; min-height: 122px; display: grid; place-items: center; color: #9ca1aa; letter-spacing: .06em; }
+    .sg-player-quick { justify-content: space-between; padding: 5px 13px 7px; color: #f0f1f2; }
+    .sg-progress { height: 2px; margin: 6px 14px 0; background: #f4f5f6; }
+    .sg-player-time { justify-content: space-between; padding: 6px 11px 4px; color: #e0e2e5; }
+    .sg-player-transport { justify-content: space-around; min-height: 32px; padding: 2px 8px 7px; font-size: .63rem; color: #f6f7f8; }
+    .sg-menu-stage { position: relative; flex: 1; display: flex; }
+    .sg-menu-stage .sg-player-shell { filter: brightness(.55); }
+    .sg-player-menu { position: absolute; z-index: 2; top: 48px; right: 10px; width: 68%; padding: 7px 0; border-radius: 8px; background: #33363c; box-shadow: 0 8px 24px rgba(0,0,0,.55); }
+    .sg-player-menu div { padding: 8px 13px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .sg-player-menu div:last-child { border-bottom: 0; }
+    .sg-appbar { min-height: 58px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #000; font-size: 1rem; font-weight: 700; }
+    .sg-back { color: #fff; font-size: 1.25rem; font-weight: 300; }
+    .sg-details { flex: 1; padding: 22px 14px; background: #05070a; display: grid; align-content: start; gap: 17px; }
+    .sg-detail-row { display: grid; grid-template-columns: 38% minmax(0,1fr); gap: 10px; align-items: start; }
+    .sg-detail-row b { color: #93979e; font-weight: 400; }
+    .sg-detail-row span { min-width: 0; color: #e9eaec; }
+    .sg-redacted { display: block; min-height: 18px; border: 1px solid #59606b; border-radius: 6px; background: #2d323b; color: #aeb3bb !important; text-align: center; padding: 2px 5px; }
+    .sg-settings { flex: 1; padding: 0 0 18px; background: #000; }
+    .sg-settings-card { overflow: hidden; margin-top: 4px; border-radius: 22px; background: #1c1c1d; }
+    .sg-setting-row { min-height: 43px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #3a3a3c; font-size: .74rem; }
+    .sg-setting-row:last-child { border-bottom: 0; }
+    .sg-setting-row span:first-child { margin-right: auto; }
+    .sg-toggle { width: 31px; height: 18px; padding: 2px; border-radius: 99px; background: #666; display: flex; align-items: center; justify-content: flex-start; }
+    .sg-toggle::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: #f5f5f5; }
+    .sg-toggle.on { justify-content: flex-end; background: #1688f8; }
+    .sg-landscape { min-height: 220px; }
+    .sg-landscape .sg-player-shell { margin-top: 5px; }
+    .sg-landscape .sg-video-mask { min-height: 72px; }
+    .spec { min-width: 0; }
+    .spec dl { display: grid; grid-template-columns: 105px minmax(0,1fr); gap: 8px 12px; margin: 0; font-size: .88rem; }
+    .spec dt { color: var(--muted); font-weight: 700; }
+    .spec dd { margin: 0; }
+    .spec h4 { font-size: .85rem; color: #c9d7e7; margin-top: 16px; }
+    .spec ul { font-size: .87rem; }
+    details { margin-top: 15px; border: 1px solid var(--line); border-radius: 14px; background: rgba(14,23,35,.6); }
+    summary { cursor: pointer; padding: 13px 16px; font-weight: 800; }
+    details > div { padding: 0 16px 16px; color: var(--muted); }
+    .checklist { list-style: none; padding: 0; }
+    .checklist li { position: relative; padding-left: 28px; }
+    .checklist li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--green); font-weight: 900; }
+    .footer { margin-top: 78px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+    @media (max-width: 1120px) {
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; max-height: none; display: grid; grid-template-columns: repeat(3,1fr); gap: 2px 8px; }
+      .toc b { grid-column: 1/-1; }
+      .screen-body { grid-template-columns: minmax(220px,.7fr) minmax(260px,1fr); }
+      .screen-body .spec { grid-column: 1/-1; }
+      .tokens { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 700px) {
+      .hero { padding: 54px 20px; min-height: 0; }
+      .layout { padding: 24px 14px 70px; }
+      .toc { grid-template-columns: repeat(2,1fr); }
+      .grid.cols-2, .grid.cols-3, .screen-body { grid-template-columns: 1fr; }
+      .screen-body .spec { grid-column: auto; }
+      .tokens { grid-template-columns: repeat(2,1fr); }
+      .screen-card header { flex-direction: column; }
+      .shot img { max-height: 620px; }
+      .wire { min-height: 320px; }
+      .section-head { display: block; }
+    }
+    @media print {
+      body { background: white; color: #111; }
+      .hero { background: #0b1727; color: white; }
+      .layout { display: block; max-width: none; padding: 20px; }
+      .toc { display: none; }
+      section { break-before: page; }
+      .screen-card { break-inside: avoid; box-shadow: none; }
+      .card, .screen-card, .table-wrap { color: #111; background: white; border-color: #bbb; }
+      .muted, figcaption, .section-head p { color: #444; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">実機観測ベース · 2026-08-29</span>
+      <h1>Samsung「ビデオ」<br>画面設計書</h1>
+      <p class="lead">SC-03L（Android 12／One UI 4.1）の動画一覧アプリと再生プレイヤーを実機操作し、企画・デザイン向けの全体像と、開発・QA向けの状態・遷移・安全境界を一つにまとめた仕様書です。</p>
+      <div class="badges">
+        <span class="badge"><strong>一覧</strong> 1.4.21.90</span>
+        <span class="badge"><strong>プレイヤー</strong> 7.3.29.1</span>
+        <span class="badge"><strong>端末</strong> Samsung SC-03L</span>
+        <span class="badge"><strong>証跡</strong> 匿名化済み 23点</span>
+        <span class="badge"><strong>安全</strong> 削除・移動・保存・送信は未確定</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目次">
+      <b>CONTENTS</b>
+      <a href="#scope">1. 調査条件</a>
+      <a href="#inventory">2. 画面一覧</a>
+      <a href="#flow">3. 画面遷移</a>
+      <a href="#design">4. 共通デザイン</a>
+      <a href="#screens">5. 画面仕様</a>
+      <a href="#dialogs">6. ダイアログ</a>
+      <a href="#coverage">7. 機能網羅表</a>
+      <a href="#states">8. 状態・例外</a>
+      <a href="#qa">9. QA観点</a>
+      <a href="#appendix">10. 補足</a>
+    </nav>
+
+    <main>
+      <section id="scope">
+        <div class="section-head">
+          <div><h2>1. 調査条件</h2><p>この文書は静的解析ではなく、接続した実機で表示・操作・戻り先を観測して作成した。</p></div>
+        </div>
+        <div class="grid cols-3">
+          <article class="card"><h3>端末・OS</h3><p class="metric">SC-03L</p><p class="muted">Android 12／One UI 4.1<br>実機キャプチャ 1440×3040 px</p></article>
+          <article class="card"><h3>表示密度</h3><p class="metric">560 dpi</p><p class="muted">実効オーバーライド。3.5 px/dp、論理画面は約411×869 dp。物理密度報告値は420 dpi。</p></article>
+          <article class="card"><h3>対象パッケージ</h3><p class="metric">2 + 外部境界</p><p class="muted"><code>com.samsung.android.videolist</code><br><code>com.samsung.android.video</code></p></article>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>調査原則</h3>
+            <ul class="checklist">
+              <li>タブ、表示形式、検索、メニュー、再生、回転などの可逆操作は実行。</li>
+              <li>既存動画の削除・移動・名前変更・編集保存は確認画面まで。</li>
+              <li>共有はAndroid共有先選択まで。宛先選択・送信は未実行。</li>
+              <li>観測できない例外・空状態・特殊形式は推測せず「未観測」と記載。</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>匿名化方針</h3>
+            <p>動画面、サムネイル、ファイル名、フォルダ名、保存パス、位置情報、共有候補を不透明マスクへ置換。実機UI文言を残す必要があるパネルだけを安全な範囲で切り出した。</p>
+            <p class="muted">本文の「実機画像」は、匿名化済み証跡または実機位置を再現した模式合成。未加工画像は成果物ディレクトリに置いていない。</p>
+          </article>
+        </div>
+        <div class="callout warn"><strong>検証中のコピー操作：</strong>コピー先フォルダのタップが確認なしで即時確定する仕様だったため、調査用動画の複製が1件生成された。生成行とファイルを特定して直後に削除し、原本の存在を再確認した。移動・削除・名前変更・編集保存・共有送信は実行していない。</div>
+      </section>
+
+      <section id="inventory">
+        <div class="section-head">
+          <div><h2>2. 画面一覧</h2><p>画面、状態差分、メニュー、ダイアログ、システム遷移を別IDで管理する。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>領域</th><th>画面ID</th><th>名称</th><th>Activity／遷移先</th><th>確認</th></tr></thead>
+            <tbody>
+              <tr><td>一覧</td><td>VL-01〜07</td><td>動画一覧3形式／メニュー／並べ替え／検索／アプリ情報</td><td><code>.list.activity.VideoList</code></td><td><span class="status observed">実機確認</span></td></tr>
+              <tr><td>フォルダ</td><td>FD-01〜06</td><td>フォルダ一覧3形式／メニュー／作成／非表示</td><td><code>.list.activity.VideoList</code></td><td><span class="status observed">実機確認</span></td></tr>
+              <tr><td>フォルダ内</td><td>FI-01〜03</td><td>フォルダ内動画／メニュー／インスタントプレーヤー</td><td><code>.list.activity.FolderItemList</code></td><td><span class="status observed">実機確認</span></td></tr>
+              <tr><td>選択</td><td>SL-01〜09</td><td>複数選択／その他／名前変更／削除／共有／コピー／移動／新規</td><td>一覧内状態＋Picker／Chooser</td><td><span class="status boundary">確定前中心</span></td></tr>
+              <tr><td>再生</td><td>PL-01〜04, 08, 11〜14, 16〜17, 19</td><td>再生／メニュー／詳細／設定／ロック／ポップアップ／GIF／横画面ほか</td><td><code>.player.activity.MoviePlayer</code>ほか</td><td><span class="status observed">実機確認</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="flow">
+        <div class="section-head">
+          <div><h2>3. 画面遷移</h2><p>青線は同一パッケージ、シアンは一覧からプレイヤーへの遷移を示す。</p></div>
+        </div>
+        <div class="flow-scroll">
+          <svg viewBox="0 0 980 720" role="img" aria-label="Samsungビデオ画面遷移図">
+            <defs>
+              <marker id="arrB" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6Z" fill="#2f8cff"/></marker>
+              <marker id="arrC" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6Z" fill="#5fd5ff"/></marker>
+              <style>
+                .n{fill:#152235;stroke:#3d536d;stroke-width:2;rx:16}.t{font:700 19px -apple-system,BlinkMacSystemFont,sans-serif;fill:#f2f7ff}.s{font:14px -apple-system,BlinkMacSystemFont,sans-serif;fill:#a8b7c9}.b{stroke:#2f8cff;stroke-width:3;fill:none;marker-end:url(#arrB)}.c{stroke:#5fd5ff;stroke-width:3;fill:none;marker-end:url(#arrC)}.d{stroke-dasharray:8 7}
+              </style>
+            </defs>
+            <rect class="n" x="55" y="70" width="240" height="90"/><text class="t" x="80" y="110">VL-01 動画一覧</text><text class="s" x="80" y="138">リスト／グリッド／拡大</text>
+            <rect class="n" x="55" y="250" width="240" height="90"/><text class="t" x="80" y="290">FD-01 フォルダ一覧</text><text class="s" x="80" y="318">タブ切替・3表示形式</text>
+            <rect class="n" x="370" y="250" width="240" height="90"/><text class="t" x="395" y="290">FI-01 フォルダ内</text><text class="s" x="395" y="318">検索・並べ替え・即時再生</text>
+            <rect class="n" x="370" y="70" width="240" height="90"/><text class="t" x="395" y="110">SL-01 選択モード</text><text class="s" x="395" y="138">共有／削除／その他</text>
+            <rect class="n" x="690" y="70" width="240" height="90"/><text class="t" x="715" y="110">PL-01 プレイヤー</text><text class="s" x="715" y="138">再生・制御・メニュー</text>
+            <rect class="n" x="690" y="250" width="240" height="90"/><text class="t" x="715" y="290">PL-04 設定系</text><text class="s" x="715" y="318">連続再生・背景再生ほか</text>
+            <rect class="n" x="690" y="430" width="240" height="90"/><text class="t" x="715" y="470">PL-12/13 派生表示</text><text class="s" x="715" y="498">ポップアップ・GIF・横画面</text>
+            <rect class="n" x="370" y="430" width="240" height="90"/><text class="t" x="395" y="470">MV-01/02 保存先</text><text class="s" x="395" y="498">コピー／移動Picker</text>
+            <rect class="n" x="55" y="530" width="240" height="90"/><text class="t" x="80" y="570">VL/FD 補助画面</text><text class="s" x="80" y="598">検索・並替・非表示・About</text>
+            <path class="b" d="M175 160V250"/><path class="b" d="M295 295H370"/><path class="b" d="M295 115H370"/><path class="b" d="M490 160V250"/>
+            <path class="c" d="M610 115H690"/><path class="c" d="M610 295C650 295 650 145 690 145"/>
+            <path class="b" d="M810 160V250"/><path class="b" d="M810 160V430"/>
+            <path class="b" d="M490 160V430"/><path class="b d" d="M295 570H370"/>
+          </svg>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--blue)"></i> 一覧アプリ内</span>
+          <span><i class="dot" style="background:var(--cyan)"></i> 一覧→プレイヤー</span>
+        </div>
+      </section>
+
+      <section id="design">
+        <div class="section-head">
+          <div><h2>4. 共通デザイン</h2><p>数値は1440×3040 px、実効560 dpi（3.5 px/dp）の実機画像とアクセシビリティ境界から算出した観測値。</p></div>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>レイアウト寸法</h3>
+            <div class="table-wrap"><table>
+              <thead><tr><th>領域</th><th>px</th><th>概算dp</th><th>注記</th></tr></thead>
+              <tbody>
+                <tr><td>画面</td><td>1440×3040</td><td>約411×869</td><td>縦画面キャプチャ</td></tr>
+                <tr><td>ステータスバー</td><td>高さ 約150</td><td>約43</td><td>時刻・通信・電池</td></tr>
+                <tr><td>アプリバー</td><td>y=150〜430</td><td>高さ 約80</td><td>One UIの大きい上部余白を含む</td></tr>
+                <tr><td>上部操作</td><td>140×224</td><td>約40×64</td><td>表示切替・検索の意味境界</td></tr>
+                <tr><td>動画リスト行</td><td>高さ 約217</td><td>約62</td><td>サムネイル＋主副情報</td></tr>
+                <tr><td>システムナビ</td><td>高さ 約317</td><td>約91</td><td>3ボタン＋アクセシビリティ</td></tr>
+              </tbody>
+            </table></div>
+          </article>
+          <article class="card">
+            <h3>文字・アイコン・操作</h3>
+            <ul>
+              <li>主タイトルは大きい白文字、補助値は中〜低コントラストのグレー。</li>
+              <li>ツールバー操作は白い線画アイコン。選択・進捗はSamsung blue。</li>
+              <li>破壊操作は赤。無効なCTAは濃い青／低コントラスト。</li>
+              <li>長押しまたは「編集」で複数選択へ入り、選択数に応じて下部アクションが有効化。</li>
+              <li>Android戻るは、オーバーレイ→子画面→フォルダ内→一覧の順に一段ずつ戻る。</li>
+            </ul>
+            <p class="muted">下部タブはアクセシビリティ上720×61 pxの境界として報告されたが、視覚領域はより大きい。実装・QAでは報告境界だけをタッチ目標の基準にしない。</p>
+          </article>
+        </div>
+        <div class="tokens">
+          <div class="swatch" style="background:#000"><strong>#000000</strong><span class="muted">基本背景</span></div>
+          <div class="swatch" style="background:#292929"><strong>#292929</strong><span class="muted">ダイアログ面</span></div>
+          <div class="swatch" style="background:#f5f5f5;color:#111"><strong>#F5F5F5</strong><span>主要文字</span></div>
+          <div class="swatch" style="background:#1687ff"><strong>#1687FF</strong><span>選択・CTA</span></div>
+          <div class="swatch" style="background:#ff6363"><strong>#FF6363</strong><span>削除</span></div>
+        </div>
+        <p class="muted">色値は匿名化前実機画像の代表色に基づく近似。テーマ・輝度・動画面の内容により見え方は変化する。</p>
+      </section>
+
+      <section id="screens">
+        <div class="section-head">
+          <div><h2>5. 各画面の実機仕様</h2><p>各IDに到達手順、匿名化実機画像、模式図、表示項目、操作、遷移、戻り先、状態差分を割り当てる。</p></div>
+        </div>
+        <div id="screenCards" class="screens"></div>
+        <noscript><div class="callout danger">この節のカード表示にはJavaScriptが必要です。画面一覧・機能網羅表はJavaScriptなしでも閲覧できます。</div></noscript>
+      </section>
+
+      <section id="dialogs">
+        <div class="section-head">
+          <div><h2>6. ダイアログ／オーバーレイ一覧</h2><p>最終確定の有無と戻し方を、QAが誤操作しない粒度で整理する。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>形式</th><th>主要文言／項目</th><th>確定条件</th><th>今回の結果</th></tr></thead>
+            <tbody>
+              <tr><td>VL-05</td><td>ボトムダイアログ</td><td>日時／タイトル、昇順／降順、キャンセル／完了</td><td>完了</td><td>日時・降順を観測、変更なし</td></tr>
+              <tr><td>FD-05</td><td>入力ダイアログ</td><td>フォルダを作成、初期名「フォルダ1」</td><td>作成</td><td>キャンセル</td></tr>
+              <tr><td>SL-04</td><td>入力ダイアログ</td><td>動画の名前を変更、キャンセル／名前変更</td><td>文字列変更後にCTA有効</td><td>変更なし・キャンセル</td></tr>
+              <tr><td>SL-05</td><td>確認ダイアログ</td><td>動画を削除しますか？</td><td>赤い「削除」</td><td>キャンセル</td></tr>
+              <tr><td>SL-06</td><td>システムChooser</td><td>プレビュー、オプション、直接共有、共有先アプリ</td><td>共有先選択後は外部側</td><td>選択せず戻る</td></tr>
+              <tr><td>SL-07/08</td><td>全画面Picker</td><td>コピー／移動、フォルダタイル</td><td>フォルダタップで即時確定</td><td>移動は未実行。コピーは検証後に復旧</td></tr>
+              <tr><td>PL-02</td><td>ポップアップメニュー</td><td>エディター、削除、共有、バックグラウンド再生ON、詳細、設定</td><td>項目ごと</td><td>安全な遷移のみ確認</td></tr>
+              <tr><td>PL-08</td><td>下部オーバーレイ</td><td>再生速度、現在倍率、スライダー</td><td>スライダー変更は即時</td><td>1.0xへ復帰</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="coverage">
+        <div class="section-head">
+          <div><h2>7. 機能網羅表</h2><p>画面上で確認した全ボタン・メニュー・タブ・ジェスチャーを、少なくとも一つの画面IDへ対応付けた。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>カテゴリ</th><th>操作要素</th><th>画面ID</th><th>結果／遷移</th><th>確認度</th></tr></thead>
+            <tbody>
+              <tr><td>一覧</td><td>動画／フォルダ タブ</td><td>VL-01, FD-01</td><td>同一Activityで表示領域を切替。選択タブに下線。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>一覧</td><td>リスト→グリッド→拡大→リスト</td><td>VL-01〜03, FD-01〜03, FI-01</td><td>上部アイコンを押すごとに循環。タブごとに状態保持。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>検索</td><td>検索、文字入力、クリア、音声検索、戻る</td><td>VL-06</td><td>インライン検索。0件で「検索結果がありません」。音声はボタン存在を確認。</td><td><span class="status observed">表示確認</span></td></tr>
+              <tr><td>整理</td><td>並べ替え</td><td>VL-05, FI-02</td><td>日時／タイトル、昇順／降順。観測時は日時・降順。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>一覧</td><td>インスタントプレーヤーON/OFF</td><td>FI-03</td><td>ONで同画面上部へ再生面、選択項目に青枠と上下移動コントロール。OFFへ復帰。</td><td><span class="status restored">復帰済み</span></td></tr>
+              <tr><td>フォルダ</td><td>作成</td><td>FD-05</td><td>入力ダイアログ。新規作成は未確定。</td><td><span class="status boundary">確定前</span></td></tr>
+              <tr><td>フォルダ</td><td>非表示スイッチ</td><td>FD-06</td><td>一部フォルダのみスイッチ表示。Camera/Downloadは無効表示。</td><td><span class="status observed">未変更</span></td></tr>
+              <tr><td>選択</td><td>編集、全て、項目選択／解除</td><td>SL-01, SL-02</td><td>0件は「動画を選択」、選択後は「1件選択」。下部操作が表示。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>選択</td><td>共有</td><td>SL-06</td><td>Android共有先Chooserへ。送信先は選択せず戻る。</td><td><span class="status boundary">Chooserまで</span></td></tr>
+              <tr><td>選択</td><td>削除</td><td>SL-05</td><td>確認ダイアログ表示。削除は未実行。</td><td><span class="status boundary">確定前</span></td></tr>
+              <tr><td>選択</td><td>エディター</td><td>SL-03, PL-02</td><td>外部エディターへの導線を確認。遷移先は本書の対象外。</td><td><span class="status observed">導線確認</span></td></tr>
+              <tr><td>選択</td><td>コピー</td><td>SL-07</td><td>保存先タップで即時確定。検証複製は削除・原本確認済み。</td><td><span class="status restored">復旧済み</span></td></tr>
+              <tr><td>選択</td><td>移動</td><td>SL-08</td><td>保存先Picker表示。フォルダ未選択で戻る。</td><td><span class="status boundary">未確定</span></td></tr>
+              <tr><td>選択</td><td>名前変更</td><td>SL-04</td><td>同名のままはCTA無効。変更せずキャンセル。</td><td><span class="status boundary">未確定</span></td></tr>
+              <tr><td>選択</td><td>再生</td><td>SL-03 → PL-01</td><td>Samsungプレイヤーへ遷移。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生</td><td>画面タップ</td><td>PL-01</td><td>操作パネルを表示／自動非表示。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生</td><td>再生／一時停止、シーク、前／次</td><td>PL-01</td><td>即時反映。前／次は隣接メディアへ。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生</td><td>速度コントローラー</td><td>PL-08</td><td>下部スライダーを表示。最終1.0xへ復帰。</td><td><span class="status restored">復帰済み</span></td></tr>
+              <tr><td>再生</td><td>画面比率</td><td>PL-17</td><td>押すごとに映像のフィット／クロップ状態が循環。ラベル名は表示されず。</td><td><span class="status observed">視覚確認</span></td></tr>
+              <tr><td>再生</td><td>ロック／解除</td><td>PL-11</td><td>ロック中は開錠ボタン以外を非表示・無効化。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生</td><td>回転</td><td>PL-14</td><td>端末の自動回転OFFでもプレイヤーが横向きを要求。戻ると縦へ。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生</td><td>Smart View</td><td>PL-01</td><td>ボタンの存在を確認。接続先選択画面は本書の対象外。</td><td><span class="status observed">導線確認</span></td></tr>
+              <tr><td>再生</td><td>字幕(CC)</td><td>PL-01</td><td>字幕ボタンの存在を確認。選択・設定画面は本書の対象外。</td><td><span class="status observed">導線確認</span></td></tr>
+              <tr><td>再生</td><td>ポップアッププレーヤー</td><td>PL-12</td><td>一覧へ戻り右上に浮遊再生。拡大、閉じる、前／再生／次、進捗。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生</td><td>GIFを作成</td><td>PL-13</td><td>範囲・4.0秒表示・速度・最初から・共有・保存。保存せず戻る。</td><td><span class="status boundary">保存前</span></td></tr>
+              <tr><td>再生</td><td>フレームをキャプチャ</td><td>PL-19</td><td>画像ファイル作成を避けるため実行せず。ボタン・条件のみ確認。</td><td><span class="status unobserved">結果未観測</span></td></tr>
+              <tr><td>再生メニュー</td><td>詳細</td><td>PL-03</td><td>日時、名前、サイズ、転送対応、保存先、位置、映像、音声。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>再生メニュー</td><td>バックグラウンド再生ON</td><td>PL-02, PL-04</td><td>メニュー項目と設定OFFを確認。ONへの変更は未実行。</td><td><span class="status boundary">未変更</span></td></tr>
+              <tr><td>設定</td><td>自動連続／自動リピート／背景／速度表示</td><td>PL-04</td><td>OFF／OFF／OFF／ONを観測。変更なし。</td><td><span class="status observed">状態確認</span></td></tr>
+              <tr><td>情報</td><td>アプリ情報、利用規約、OSSライセンス</td><td>VL-07</td><td>一覧アプリのバージョンと情報導線を確認。</td><td><span class="status observed">実行</span></td></tr>
+              <tr><td>戻る</td><td>Android戻る／上位階層</td><td>全画面</td><td>オーバーレイを閉じる、子画面から親へ、外部から呼出元へ。</td><td><span class="status observed">実行</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="states">
+        <div class="section-head">
+          <div><h2>8. 状態差分・未観測条件</h2><p>再現できなかった内容を仕様で補完せず、再現条件と合わせて残す。</p></div>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>観測した状態差分</h3>
+            <ul>
+              <li>動画／フォルダ／フォルダ内ごとのリスト・グリッド・拡大表示。</li>
+              <li>検索の初期・入力中・0件、編集の0件・1件選択。</li>
+              <li>インスタントプレーヤーOFF／ON、プレイヤー操作表示／非表示／ロック。</li>
+              <li>縦画面／プレイヤー要求の横画面、通常／ポップアップ。</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>未観測・再現条件</h3>
+            <ul>
+              <li><strong>空一覧／空フォルダ：</strong>端末上に対象空状態がなかった。</li>
+              <li><strong>破損・未対応形式：</strong>安全に使えるテストファイルがなかった。</li>
+              <li><strong>権限拒否／ストレージ障害：</strong>既存状態を壊さないため権限変更を行わなかった。</li>
+              <li><strong>NewFolderPickerActivity：</strong>パッケージ内存在は確認したが、UI導線を再現できなかった。</li>
+              <li><strong>Smart View接続先：</strong>接続可能機器なし。Chooserを再現できなかった。</li>
+              <li><strong>フレーム保存結果：</strong>新規ファイル作成を避けて未実行。</li>
+              <li><strong>背景再生ON後：</strong>設定変更を避けて未実行。</li>
+            </ul>
+          </article>
+        </div>
+        <details>
+          <summary>外部遷移の責任境界</summary>
+          <div>共有はAndroid Chooserを表示した時点、編集は<code>com.sec.android.app.vepreload</code>の保存前画面を表示した時点を責任境界とする。外部側の投稿・保存・送信・アカウント操作は本設計の対象外。</div>
+        </details>
+      </section>
+
+      <section id="qa">
+        <div class="section-head">
+          <div><h2>9. QA観点と受入条件</h2><p>画面の見た目だけでなく、状態の保存・戻り先・即時確定の有無を重点確認する。</p></div>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>重点シナリオ</h3>
+            <ol>
+              <li>各タブで表示形式を3周し、タブごとの状態保持を確認。</li>
+              <li>検索の入力・クリア・0件・戻るで一覧状態が壊れないこと。</li>
+              <li>0件／1件／複数件選択の下部操作とメニュー有効性。</li>
+              <li>コピー／移動Pickerは保存先タップが即時確定するため、専用テストデータで行う。</li>
+              <li>プレイヤー制御の自動非表示、ロック、縦横、ポップアップからの復帰。</li>
+              <li>速度・画面比率が終了後に意図した状態へ戻ること。</li>
+            </ol>
+          </article>
+          <article class="card">
+            <h3>受入チェック</h3>
+            <ul class="checklist">
+              <li>全画面IDに到達・表示・操作・戻り先・状態差分がある。</li>
+              <li>全操作要素が機能網羅表へ対応する。</li>
+              <li>一覧とプレイヤーのパッケージ間遷移を確認できる。</li>
+              <li>デスクトップ／狭幅で表・画像・模式図がはみ出さない。</li>
+              <li>成果物画像からサムネイル、名前、パス、位置、連絡先を復元できない。</li>
+              <li>未観測を推測で埋めていない。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="appendix">
+        <div class="section-head">
+          <div><h2>10. 補足情報</h2><p>再現・改修時に参照するパッケージ／Activity。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>用途</th><th>識別子</th><th>観測</th></tr></thead>
+            <tbody>
+              <tr><td>一覧</td><td><code>com.samsung.android.videolist/.list.activity.VideoList</code></td><td>動画／フォルダのルート</td></tr>
+              <tr><td>検索</td><td><code>.list.activity.SearchActivity</code></td><td>パッケージ内Activity。実機UIはルート上のインライン検索として観測</td></tr>
+              <tr><td>フォルダ内</td><td><code>.list.activity.FolderItemList</code></td><td>フォルダ名をタイトル表示</td></tr>
+              <tr><td>コピー／移動</td><td><code>.list.activity.MoveFolderPickerActivity</code></td><td>タイトルでコピー／移動を区別</td></tr>
+              <tr><td>新規保存先</td><td><code>.list.activity.NewFolderPickerActivity</code></td><td>存在確認、画面未観測</td></tr>
+              <tr><td>プレイヤー</td><td><code>com.samsung.android.video/.player.activity.MoviePlayer</code></td><td>一覧からVIEW Intentで遷移</td></tr>
+              <tr><td>設定</td><td><code>.player.activity.SettingsActivity</code></td><td>再生設定</td></tr>
+              <tr><td>共有</td><td><code>android/com.android.internal.app.ChooserActivity</code></td><td>OS共有先選択</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="footer">
+          <p>調査日：2026-08-29（Asia/Tokyo）／対象：Samsung SC-03L、Android 12、One UI 4.1</p>
+          <p>終了時状態：動画タブ、リスト表示、インスタントプレーヤーOFF、プレイヤー停止。変更を確定した設定はなし。</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const A = "Samsungビデオ_画面設計_assets/";
+    const screens = [
+      {id:"VL-01",title:"動画一覧：リスト表示",status:"observed",img:"VL-01_video-list.webp",kind:"list",reach:"ビデオ起動 → 動画タブ",back:"ホーム／アプリ終了",items:"表示形式、検索、その他、動画行（サムネイル・名前・時間・サイズ・進捗）、動画／フォルダタブ",ops:"行タップで再生。表示形式でグリッドへ。長押しまたは編集で選択モード。",state:"初期観測状態。現在位置のある動画はサムネイル下に青い進捗線。"},
+      {id:"VL-02",title:"動画一覧：グリッド表示",status:"observed",img:"VL-01_video-list.webp",kind:"grid",reach:"VL-01 → 表示形式",back:"VL-02のままアプリ終了／タブ切替",items:"2列グリッド、サムネイル、時間、ファイル名",ops:"項目タップで再生。表示形式で拡大表示へ。",state:"リストより画像優先。動画タブ内で形式を保持。実機内容はマスク。"},
+      {id:"VL-03",title:"動画一覧：拡大表示",status:"observed",img:"VL-01_video-list.webp",kind:"grid",reach:"VL-02 → 表示形式",back:"表示形式でVL-01へ循環",items:"1列の大きなサムネイル、時間、ファイル名",ops:"項目タップで再生。表示形式でリストへ。",state:"サムネイルを最も大きく表示する状態。"},
+      {id:"VL-04",title:"動画一覧：その他メニュー",status:"observed",img:"VL-02_main-menu.webp",kind:"menu",reach:"VL-01 → 右上「その他」",back:"画面外タップ／Android戻る",items:"編集、並べ替え、インスタントプレーヤーON、ビデオについて、お問い合わせ",ops:"各項目へ。インスタントプレーヤーはON/OFFが文言で反転。",state:"タブが動画のときのメニュー。フォルダタブとは項目が異なる。"},
+      {id:"VL-05",title:"並べ替えダイアログ",status:"observed",img:"VL-03_sort.webp",kind:"dialog",reach:"VL-04 → 並べ替え",back:"キャンセル／Android戻る",items:"キー：日時・タイトル、順序：昇順・降順、キャンセル、完了",ops:"ラジオ選択後「完了」で一覧へ反映。",state:"観測時は日時・降順。今回は変更せず戻した。"},
+      {id:"VL-06",title:"検索／検索結果0件",status:"observed",img:"VL-04_search-empty.webp",kind:"search",reach:"VL-01 → 検索",back:"左上戻るで元一覧",items:"戻る、検索入力、音声検索、入力後のクリア、結果リスト／空表示",ops:"入力に連動して絞り込み。0件は「検索結果がありません」。",state:"検証文字列は送信されないローカル検索。音声入力は導線のみ確認。"},
+      {id:"VL-07",title:"ビデオについて",status:"observed",img:"VL-05_about.webp",kind:"about",reach:"VL-04 → ビデオについて",back:"左上戻る",items:"ビデオ、バージョン1.4.21.90、更新状態、アプリ情報、利用規約、オープンソースライセンス",ops:"情報／規約／ライセンスへ。",state:"最新バージョンがインストールされています、と表示。"},
+
+      {id:"FD-01",title:"フォルダ一覧：リスト表示",status:"observed",img:"FD-01_folder-list.webp",kind:"list",reach:"VL-01 → フォルダタブ",back:"動画タブ／アプリ終了",items:"表示形式、検索、その他、フォルダ行（サムネイル・名前・件数）",ops:"フォルダ行でFI-01。表示形式はグリッドへ。",state:"フォルダ名・サムネイルは匿名化。タブに選択下線。"},
+      {id:"FD-02",title:"フォルダ一覧：グリッド表示",status:"observed",img:"FD-01_folder-list.webp",kind:"grid",reach:"FD-01 → 表示形式",back:"タブ切替／アプリ終了",items:"3列フォルダタイル、サムネイル、名前、件数",ops:"タイルでフォルダ内へ。表示形式で拡大へ。",state:"動画グリッドより列数が多い。"},
+      {id:"FD-03",title:"フォルダ一覧：拡大表示",status:"observed",img:"FD-01_folder-list.webp",kind:"grid",reach:"FD-02 → 表示形式",back:"表示形式でFD-01へ循環",items:"1列の大きなフォルダサムネイル、名前、件数",ops:"タイルでフォルダ内へ。",state:"フォルダタブ内で形式を保持。"},
+      {id:"FD-04",title:"フォルダ：その他メニュー",status:"observed",img:"VL-02_main-menu.webp",kind:"menu",reach:"FD-01 → 右上「その他」",back:"画面外タップ／戻る",items:"編集、フォルダを作成、フォルダを非表示、ビデオについて、お問い合わせ",ops:"フォルダ管理または情報画面へ。",state:"動画タブの「並べ替え」「インスタントプレーヤー」は表示されない。"},
+      {id:"FD-05",title:"フォルダを作成",status:"boundary",img:"FD-02_create-folder.webp",kind:"dialog",reach:"FD-04 → フォルダを作成",back:"キャンセル／戻る",items:"名称入力、初期名「フォルダ1」、キャンセル、作成、ソフトキーボード",ops:"名前入力後「作成」で新規フォルダ。",state:"作成は未確定。キーボード出現でダイアログが上方へ移動。"},
+      {id:"FD-06",title:"フォルダを非表示",status:"observed",img:"FD-03_hide-folders.webp",kind:"settings",reach:"FD-04 → フォルダを非表示",back:"左上戻る",items:"フォルダ行、対象ごとのスイッチ",ops:"スイッチで一覧から隠す／戻す。",state:"Camera／Downloadはスイッチなしの無効表示。変更は行っていない。"},
+
+      {id:"FI-01",title:"フォルダ内動画",status:"observed",img:"FI-01_folder-items.webp",kind:"list",reach:"FD-01 → 任意のフォルダ",back:"FD-01",items:"戻る、フォルダ名、表示形式、検索、その他、動画行",ops:"動画でPL-01。検索・表示形式・編集が利用可能。",state:"タイトルだけがルート一覧と異なる。内容は匿名化。"},
+      {id:"FI-02",title:"フォルダ内：その他メニュー",status:"observed",img:"VL-02_main-menu.webp",kind:"menu",reach:"FI-01 → 右上「その他」",back:"画面外タップ／戻る",items:"編集、並べ替え、インスタントプレーヤーON/OFF",ops:"選択、並べ替え、同画面内プレビュー切替。",state:"情報・お問い合わせは表示されない。"},
+      {id:"FI-03",title:"インスタントプレーヤー",status:"restored",img:"FI-02_instant-player.webp",kind:"player",reach:"FI-02 → インスタントプレーヤーON → 動画サムネイル",back:"同メニューでOFF／フォルダ戻る",items:"上部インライン再生面、青枠の選択動画、上下移動コントロール",ops:"一覧を離れず再生対象を変更。",state:"検証後OFFへ戻した。再生進捗は更新される可能性あり。"},
+
+      {id:"SL-01",title:"編集：0件選択",status:"observed",img:"SL-01_selection-more.webp",kind:"list",reach:"VL-04またはFI-02 → 編集",back:"Android戻る",items:"「動画を選択」、全て、各項目の未選択円",ops:"全て／個別タップで選択。",state:"0件では下部確定操作が無効または非表示。"},
+      {id:"SL-02",title:"編集：1件以上選択",status:"observed",img:"SL-01_selection-more.webp",kind:"list",reach:"SL-01 → 1件選択",back:"選択解除／戻る",items:"「1件選択」、選択チェック、共有、削除、その他",ops:"共有・削除・その他を有効化。",state:"選択数に応じてタイトルが変化。"},
+      {id:"SL-03",title:"選択：その他メニュー",status:"observed",img:"SL-01_selection-more.webp",kind:"menu",reach:"SL-02 → その他",back:"画面外タップ／戻る",items:"エディター、コピー、移動、名前変更、再生、セキュリティフォルダに移動",ops:"各処理または外部遷移へ。",state:"単一選択で全項目を観測。複数選択時の差分は未観測。"},
+      {id:"SL-04",title:"動画の名前を変更",status:"boundary",img:"SL-02_rename.webp",kind:"dialog",reach:"SL-03 → 名前変更",back:"キャンセル／戻る",items:"現在名、キャンセル、名前変更、ソフトキーボード",ops:"文字列が変わるとCTA有効化。",state:"同名のまま「名前変更」は無効。変更せず戻した。"},
+      {id:"SL-05",title:"動画削除の確認",status:"boundary",img:"SL-03_delete-confirm.webp",kind:"dialog",reach:"SL-02 → 削除",back:"キャンセル／戻る",items:"「動画を削除しますか？」、キャンセル、赤い削除",ops:"削除で不可逆処理。",state:"削除は未実行。"},
+      {id:"SL-06",title:"共有先選択",status:"boundary",img:"SY-01_share-chooser.webp",kind:"share",reach:"SL-02 → 共有",back:"Android戻るでSL-02",items:"ファイルプレビュー、オプション、直接共有、共有先アプリ",ops:"共有先選択後は外部アプリへ。",state:"連絡先・プレビューは完全マスク。送信先未選択。"},
+      {id:"SL-07",title:"コピー先フォルダ",status:"restored",img:"MV-01_copy-picker.webp",kind:"picker",reach:"SL-03 → コピー",back:"左上戻る",items:"タイトル「コピー」、保存先フォルダタイル",ops:"フォルダタップで追加確認なしに即時コピー。",state:"検証で生じた複製は削除、原本確認済み。専用テストデータ必須。"},
+      {id:"SL-08",title:"移動先フォルダ",status:"boundary",img:"MV-02_move-picker.webp",kind:"picker",reach:"SL-03 → 移動",back:"左上戻る",items:"タイトル「移動」、保存先フォルダタイル、「新規」表示",ops:"フォルダタップで即時移動と推定されるため未選択。",state:"「新規」は最近作成フォルダのバッジとして観測。移動未実行。"},
+      {id:"SL-09",title:"新規フォルダ選択",status:"unobserved",img:"MV-01_copy-picker.webp",kind:"picker",reach:"パッケージ内Activityは確認。実機導線は未再現。",back:"未観測",items:"NewFolderPickerActivityの存在のみ確認",ops:"推測で補完しない。",state:"専用テスト環境でコピー／移動Pickerの新規保存先導線を再調査する。"},
+      {id:"PL-01",title:"動画プレイヤー：操作表示",status:"observed",img:"PL-01_player-controls.webp",kind:"player",reach:"VL-01／FI-01の動画 → 再生",back:"一覧／フォルダ内へ戻る",items:"Smart View、CC、その他、GIF、ポップアップ、フレーム、速度、画面比率、シーク、ロック、前、再生／停止、次、回転",ops:"中央タップで操作表示／自動非表示。各操作は即時。",state:"動画面・ファイル名は不透明マスク。再生履歴／進捗は更新され得る。"},
+      {id:"PL-02",title:"プレイヤー：その他メニュー",status:"observed",img:"PL-02_player-menu.webp",kind:"menu",reach:"PL-01 → 右上「その他」",back:"画面外タップ／戻る",items:"エディター、削除、共有、バックグラウンド再生ON、詳細、設定",ops:"安全な画面は実行、破壊／送信／設定変更は確定前まで。",state:"バックグラウンド再生はOFF状態のため項目がON表記。"},
+      {id:"PL-03",title:"動画の詳細",status:"observed",img:"PL-03_details.webp",kind:"settings",reach:"PL-02 → 詳細",back:"左上戻る",items:"日時、名前、サイズ、他のデバイスに転送、保存場所、位置情報、動画、音声",ops:"閲覧のみ。編集・共有・削除などの操作はない。",state:"個別値は完全マスク。動画は形式・解像度・コーデック、音声はチャンネル・コーデックを観測。"},
+      {id:"PL-04",title:"プレイヤー設定",status:"observed",img:"PL-04_settings.webp",kind:"settings",reach:"PL-02 → 設定",back:"左上戻る",items:"自動連続、自動リピート、バックグラウンド、速度コントローラー、明るさ、About、問い合わせ",ops:"スイッチは即時変更。子画面へ遷移。",state:"観測値：OFF／OFF／OFF／ON。変更なし。"},
+      {id:"PL-08",title:"再生速度コントローラー",status:"restored",img:"PL-01_player-controls.webp",kind:"slider",reach:"PL-01 → 1.0x",back:"画面外タップ／戻る",items:"再生速度、現在倍率、スライダー",ops:"ドラッグで即時変更。",state:"端点操作後に1.0xへ戻した。端点ラベルは画面上で文字表示されず、仕様値は未断定。"},
+      {id:"PL-11",title:"プレイヤーロック",status:"observed",img:"PL-01_player-controls.webp",kind:"player",reach:"PL-01 → ロック",back:"開錠ボタンでPL-01",items:"開いた南京錠のみ",ops:"誤操作防止。開錠で全操作復帰。",state:"ロック中は他のプレイヤー操作が非表示。"},
+      {id:"PL-12",title:"ポップアッププレーヤー",status:"observed",img:"PL-12_popup.webp",kind:"popup",reach:"PL-01 → ポップアッププレーヤー",back:"×で閉じる／拡大でPL-01",items:"浮遊映像、拡大、閉じる、前、再生／停止、次、進捗",ops:"一覧上で再生を継続しながら操作。",state:"フォルダ内画面の右上へ表示。映像・背景一覧はマスク。"},
+      {id:"PL-13",title:"GIF作成",status:"boundary",img:"PL-13_gif-editor.webp",kind:"gif",reach:"PL-01 → GIFを作成",back:"左上戻る",items:"共有、保存、プレビュー、選択範囲、4.0秒、速度、最初から",ops:"範囲・速度調整後に共有／保存。",state:"保存・共有は未実行。アクセシビリティは開始03秒／終了09秒を通知。"},
+      {id:"PL-14",title:"横画面プレイヤー",status:"observed",img:"PL-11_landscape.webp",kind:"land",reach:"PL-01 → 回転",back:"回転／プレイヤー終了で縦へ",items:"横幅へ再配置された全操作、右側システムナビ",ops:"縦と同等。",state:"システム自動回転OFFでもアプリ要求で横向き。3040×1440 px。"},
+      {id:"PL-16",title:"プレイヤー共有／削除確認",status:"boundary",img:"SY-01_share-chooser.webp",kind:"share",reach:"PL-02 → 共有／削除",back:"Chooserまたは確認を閉じる",items:"共有はAndroid共有先Chooser、削除は確認ダイアログ",ops:"一覧選択時と同じシステム境界・破壊境界。",state:"送信・削除とも未実行。"},
+      {id:"PL-17",title:"画面比率の切替",status:"observed",img:"PL-01_player-controls.webp",kind:"player",reach:"PL-01 → 画面比率",back:"循環して元表示",items:"画面比率アイコン",ops:"タップごとにフィット／拡大・クロップの見え方を切替。",state:"アクセシビリティ名は常に「画面比率 ボタン」。モード名のトーストは未観測。"},
+      {id:"PL-19",title:"フレームをキャプチャ",status:"unobserved",img:"PL-01_player-controls.webp",kind:"player",reach:"PL-01 → フレームをキャプチャ",back:"PL-01",items:"フレームキャプチャアイコン",ops:"現在フレームを画像として保存すると考えられるが、結果は未観測。",state:"新規ファイル作成を避ける安全境界として未実行。"},
+    ];
+
+    const labels = {observed:"実機確認", boundary:"確定前", unobserved:"未観測", restored:"復帰済み"};
+    function samsungPlayerWire(mode) {
+      const shell = '<div class="sg-player-shell">'+
+        '<div class="sg-player-head"><strong>MASKED VIDEO</strong><span>Smart View</span><span>CC</span><span>その他</span></div>'+
+        '<div class="sg-player-tools"><span>GIF</span><span>ポップアップ</span></div>'+
+        '<div class="sg-video-mask">VIDEO SURFACE MASKED</div>'+
+        '<div class="sg-player-quick"><span>フレーム</span><span>1.0x</span><span>画面比率</span></div>'+
+        '<div class="sg-progress"></div><div class="sg-player-time"><span>0:00</span><span>0:22</span></div>'+
+        '<div class="sg-player-transport"><span>ロック</span><span>前へ</span><span>再生</span><span>次へ</span><span>回転</span></div></div>';
+      if (mode === 'menu') return '<div class="sg-screen sg-menu-stage">'+shell+'<div class="sg-player-menu"><div>エディター</div><div>削除</div><div>共有</div><div>バックグラウンド再生ON</div><div>詳細</div><div>設定</div></div></div>';
+      if (mode === 'locked') return '<div class="sg-screen"><div class="sg-player-shell"><div class="sg-video-mask">VIDEO SURFACE MASKED</div><div class="sg-player-transport"><span>ロック解除</span></div></div></div>';
+      if (mode === 'landscape') return '<div class="sg-screen sg-landscape">'+shell+'</div>';
+      return '<div class="sg-screen">'+shell+'</div>';
+    }
+    function samsungDetailsWire() {
+      const rows = [
+        ['日時','VALUE MASKED'],['名前','VALUE MASKED'],['サイズ','VALUE MASKED'],
+        ['他のデバイスに転送','対応'],['保存場所','VALUE MASKED'],['位置情報','VALUE MASKED'],
+        ['動画','形式・解像度・コーデック'],['音声','チャンネル・コーデック']
+      ];
+      return '<div class="sg-screen"><div class="sg-appbar"><span class="sg-back">‹</span><span>詳細</span></div><div class="sg-details">'+rows.map(r => '<div class="sg-detail-row"><b>'+r[0]+'</b><span class="'+(r[1] === 'VALUE MASKED' ? 'sg-redacted' : '')+'">'+r[1]+'</span></div>').join('')+'</div></div>';
+    }
+    function samsungSettingsWire() {
+      const rows = [
+        ['動画を自動連続再生','off'],['動画を自動リピート再生','off'],['バックグラウンド再生','off'],
+        ['速度コントローラーを表示','on'],['動画の明るさ',''],['動画プレーヤーについて',''],['お問い合わせ','']
+      ];
+      return '<div class="sg-screen"><div class="sg-appbar"><span class="sg-back">‹</span><span>動画プレーヤー設定</span></div><div class="sg-settings"><div class="sg-settings-card">'+rows.map(r => '<div class="sg-setting-row"><span>'+r[0]+'</span>'+(r[1] ? '<span class="sg-toggle '+r[1]+'"></span>' : '')+'</div>').join('')+'</div></div></div>';
+    }
+    function wire(screen) {
+      const kind = screen.kind;
+      const title = screen.id;
+      if (screen.id === 'PL-01' || screen.id === 'PL-08' || screen.id === 'PL-17' || screen.id === 'PL-19') return samsungPlayerWire('default');
+      if (screen.id === 'PL-02') return samsungPlayerWire('menu');
+      if (screen.id === 'PL-03') return samsungDetailsWire();
+      if (screen.id === 'PL-04') return samsungSettingsWire();
+      if (screen.id === 'PL-11') return samsungPlayerWire('locked');
+      if (screen.id === 'PL-14') return samsungPlayerWire('landscape');
+      const top = '<div class="wire-top"><span>'+title+'</span><span>◻︎　⌕　⋮</span></div>';
+      const rows = '<div class="wire-content"><div class="wire-row"></div><div class="wire-row"></div><div class="wire-row"></div><div class="wire-row"></div></div>';
+      if (kind === "grid") return top+'<div class="wire-content wire-grid">'+rows.replace('<div class="wire-content">','').replace('</div>','')+'<div class="wire-row"></div><div class="wire-row"></div></div>';
+      if (kind === "dialog" || kind === "menu") return top+rows+'<div class="wire-panel"><div class="wire-line"></div><div class="wire-line short"></div><div class="wire-line"></div><div class="wire-actions"><i></i><i></i></div></div>';
+      if (kind === "search") return '<div class="wire-top"><span>‹　検索...</span><span>🎙</span></div><div class="wire-content" style="place-items:center"><span class="muted">検索結果がありません</span></div>';
+      if (["player","slider","land"].includes(kind)) return top+'<div class="wire-player"><span>VIDEO / PRIVATE CONTENT MASKED</span><div><div class="wire-line" style="width:100%"></div><div class="wire-controls"><span>🔒</span><span>◀</span><span>▶</span><span>▶</span><span>↻</span></div></div></div>';
+      if (kind === "popup") return top+rows+'<div class="wire-panel" style="width:52%;margin-left:auto"><div class="wire-line"></div><div class="wire-controls"><span>◀</span><span>▶</span><span>▶</span></div></div>';
+      if (kind === "settings" || kind === "about") return top+'<div class="wire-content">'+Array(6).fill('<div class="wire-row" style="background:#131e2b"></div>').join("")+'</div>';
+      if (kind === "picker" || kind === "share") return top+'<div class="wire-content wire-grid">'+Array(6).fill('<div class="wire-row"></div>').join("")+'</div>';
+      if (kind === "gif" || kind === "editor") return top+'<div class="wire-player"><span>PREVIEW MASKED</span><div><div class="wire-line" style="width:100%"></div><div class="wire-controls"><span>範囲</span><span>1.0x</span><span>保存前</span></div></div></div>';
+      return top+rows;
+    }
+    const cards = document.getElementById("screenCards");
+    screens.forEach(s => {
+      const article = document.createElement("article");
+      article.className = "screen-card";
+      article.id = s.id;
+      const land = s.kind === "land" ? " land" : "";
+      article.innerHTML =
+        '<header><div><span class="id">'+s.id+'</span><h3>'+s.title+'</h3></div><span class="status '+s.status+'">'+labels[s.status]+'</span></header>'+
+        '<div class="screen-body">'+
+          '<figure class="shot'+land+'"><img src="'+A+s.img+'" alt="'+s.id+' '+s.title+'の匿名化済み実機画像" decoding="async"><figcaption>匿名化済み実機証跡。私的コンテンツは不透明マスク。</figcaption></figure>'+
+          '<div class="wire" aria-label="'+s.title+'の模式図">'+wire(s)+'</div>'+
+          '<div class="spec"><dl><dt>到達</dt><dd>'+s.reach+'</dd><dt>戻り先</dt><dd>'+s.back+'</dd><dt>表示項目</dt><dd>'+s.items+'</dd><dt>操作・遷移</dt><dd>'+s.ops+'</dd><dt>状態差分</dt><dd>'+s.state+'</dd></dl></div>'+
+        '</div>';
+      cards.appendChild(article);
+    });
+  </script>
+</body>
+</html>

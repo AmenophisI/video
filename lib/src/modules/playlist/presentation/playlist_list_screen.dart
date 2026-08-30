@@ -18,100 +18,48 @@ class PlaylistListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final playlistsAsync = ref.watch(playlistsProvider);
 
-    return Scaffold(
-      body: playlistsAsync.when(
-        data: (playlists) {
-          if (playlists.isEmpty) {
-            return const Center(child: Text('プレイリストがありません'));
-          }
+    return playlistsAsync.when(
+      data: (playlists) {
+        if (playlists.isEmpty) {
+          return const Center(child: Text('プレイリストがありません'));
+        }
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-            itemCount: playlists.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final playlist = playlists[index];
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 24),
+          itemCount: playlists.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 2),
+          itemBuilder: (context, index) {
+            final playlist = playlists[index];
 
-              return ListTile(
-                leading: const Icon(Icons.playlist_play),
-                title: Text(playlist.name),
-                subtitle: Text('${playlist.videoCount}件の動画'),
-                trailing: PopupMenuButton<_PlaylistAction>(
-                  onSelected: (action) async {
-                    switch (action) {
-                      case _PlaylistAction.rename:
-                        await _showRenameDialog(context, ref, playlist);
-                      case _PlaylistAction.delete:
-                        await ref
-                            .read(playlistRepositoryProvider)
-                            .deletePlaylist(playlist.id);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: _PlaylistAction.rename,
-                      child: Text('名前変更'),
+            return _PlaylistRow(
+              playlist: playlist,
+              color: _playlistAccent(index),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PlaylistVideosScreen(
+                      playlistId: playlist.id,
                     ),
-                    PopupMenuItem(
-                      value: _PlaylistAction.delete,
-                      child: Text('削除'),
-                    ),
-                  ],
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => PlaylistVideosScreen(
-                        playlistId: playlist.id,
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-        error: (error, _) => Center(child: Text(error.toString())),
-        loading: () => const Center(child: CircularProgressIndicator()),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateDialog(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('作成'),
-      ),
+                  ),
+                );
+              },
+              onActionSelected: (action) async {
+                switch (action) {
+                  case _PlaylistAction.rename:
+                    await _showRenameDialog(context, ref, playlist);
+                  case _PlaylistAction.delete:
+                    await ref
+                        .read(playlistRepositoryProvider)
+                        .deletePlaylist(playlist.id);
+                }
+              },
+            );
+          },
+        );
+      },
+      error: (error, _) => Center(child: Text(error.toString())),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
-  }
-
-  Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('プレイリスト作成'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '名前'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('キャンセル'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('作成'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-
-    if (name == null) {
-      return;
-    }
-
-    await ref.read(playlistRepositoryProvider).createPlaylist(name);
   }
 
   Future<void> _showRenameDialog(
@@ -152,6 +100,124 @@ class PlaylistListScreen extends ConsumerWidget {
           name: name,
         );
   }
+}
+
+class _PlaylistRow extends StatelessWidget {
+  const _PlaylistRow({
+    required this.playlist,
+    required this.color,
+    required this.onTap,
+    required this.onActionSelected,
+  });
+
+  final Playlist playlist;
+  final Color color;
+  final VoidCallback onTap;
+  final ValueChanged<_PlaylistAction> onActionSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      button: true,
+      label: '${playlist.name}、${playlist.videoCount}件の動画',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        color,
+                        Color.alphaBlend(
+                          Colors.black.withValues(alpha: 0.28),
+                          color,
+                        ),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.playlist_play,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        playlist.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '${playlist.videoCount}件の動画',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<_PlaylistAction>(
+                  tooltip: 'プレイリスト操作',
+                  onSelected: onActionSelected,
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _PlaylistAction.rename,
+                      child: Text('名前変更'),
+                    ),
+                    PopupMenuItem(
+                      value: _PlaylistAction.delete,
+                      child: Text('削除'),
+                    ),
+                  ],
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: colorScheme.onSurfaceVariant,
+                  size: 21,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _playlistAccent(int index) {
+  const colors = [
+    Color(0xFF0F766E),
+    Color(0xFF7C3AED),
+    Color(0xFFDB2777),
+    Color(0xFF2563EB),
+    Color(0xFFEA580C),
+    Color(0xFF0891B2),
+  ];
+
+  return colors[index % colors.length];
 }
 
 class PlaylistVideosScreen extends ConsumerWidget {

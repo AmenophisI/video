@@ -16,6 +16,9 @@ class MediaStoreVideoDto {
     this.rotationDegrees,
     this.bitrate,
     this.frameRate,
+    this.videoCodec,
+    this.audioCodec,
+    this.audioChannelCount,
     this.metadataText,
     this.subtitleUri,
     this.isHdr = false,
@@ -44,6 +47,9 @@ class MediaStoreVideoDto {
       rotationDegrees: _intFrom(map['rotationDegrees']),
       bitrate: _intFrom(map['bitrate']),
       frameRate: _doubleFrom(map['frameRate']),
+      videoCodec: _stringFrom(map['videoCodec']),
+      audioCodec: _stringFrom(map['audioCodec']),
+      audioChannelCount: _intFrom(map['audioChannelCount']),
       metadataText: _stringFrom(map['metadataText']),
       subtitleUri: _uriFrom(map['subtitleUri']),
       isHdr: _boolFrom(map['isHdr']) ?? false,
@@ -68,6 +74,9 @@ class MediaStoreVideoDto {
   final int? rotationDegrees;
   final int? bitrate;
   final double? frameRate;
+  final String? videoCodec;
+  final String? audioCodec;
+  final int? audioChannelCount;
   final String? metadataText;
   final Uri? subtitleUri;
   final bool isHdr;

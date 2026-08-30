@@ -8,6 +8,7 @@ import 'package:video_player/src/modules/settings/domain/settings_repository.dar
 import 'package:video_player/src/modules/video/application/video_providers.dart';
 import 'package:video_player/src/modules/video/data/repositories/in_memory_video_repository.dart';
 import 'package:video_player/src/modules/video/domain/video.dart';
+import 'package:video_player/src/modules/video/domain/video_query.dart';
 
 void main() {
   testWidgets('shows playback controls in fullscreen player', (tester) async {
@@ -35,8 +36,23 @@ void main() {
     expect(find.text('家族旅行.mp4'), findsOneWidget);
     expect(find.byType(Slider), findsOneWidget);
     expect(find.byTooltip('一時停止'), findsOneWidget);
-    expect(find.byTooltip('10秒戻る'), findsOneWidget);
-    expect(find.byIcon(Icons.replay_10), findsOneWidget);
+    expect(find.byTooltip('10秒戻る'), findsNothing);
+    expect(find.byTooltip('10秒進む'), findsNothing);
+    expect(find.byIcon(Icons.replay_10), findsNothing);
+    expect(find.byIcon(Icons.forward_10), findsNothing);
+    expect(find.byTooltip('ミュート'), findsNothing);
+    expect(find.byTooltip('戻る'), findsNothing);
+    expect(find.byTooltip('Smart View'), findsOneWidget);
+    expect(find.byTooltip('ポップアッププレーヤー'), findsOneWidget);
+    expect(find.byTooltip('GIFを作成'), findsOneWidget);
+    expect(find.byTooltip('フレームをキャプチャ'), findsOneWidget);
+    expect(find.byTooltip('再生速度'), findsOneWidget);
+    expect(find.byTooltip('画面比率'), findsOneWidget);
+    expect(find.byTooltip('ロック'), findsOneWidget);
+    final overlay = tester.widget<ColoredBox>(
+      find.byKey(const ValueKey('player-controls-overlay')),
+    );
+    expect(overlay.color, Colors.transparent);
 
     await tester.tapAt(const Offset(180, 300));
     await tester.pump();
@@ -82,7 +98,48 @@ void main() {
 
     expect(find.text('字幕付き.mp4'), findsOneWidget);
     expect(find.byTooltip('字幕OFF'), findsWidgets);
-    expect(find.byIcon(Icons.closed_caption), findsWidgets);
+    expect(find.text('CC'), findsOneWidget);
+  });
+
+  testWidgets('opens Samsung details and settings from the player menu',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            const _TestSettingsRepository(),
+          ),
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FullScreenPlayerScreen(videoId: 'video-001'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tapAt(const Offset(180, 300));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    expect(find.text('バックグラウンド再生ON'), findsNothing);
+    expect(find.byKey(const ValueKey('player-menu-divider')), findsOneWidget);
+    await tester.tap(find.text('詳細'));
+    await tester.pumpAndSettle();
+    expect(find.text('他のデバイスに転送'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(180, 300));
+    await tester.pump();
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('設定'));
+    await tester.pumpAndSettle();
+    expect(find.text('動画プレーヤー設定'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('fullscreen player scrolls on small screens with large text',
@@ -204,6 +261,197 @@ void main() {
 
     await gesture.up();
     await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('horizontal drag still seeks while controls are visible',
+      (tester) async {
+    tester.view.physicalSize = const Size(820, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            const _TestSettingsRepository(),
+          ),
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FullScreenPlayerScreen(videoId: 'video-001'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tapAt(const Offset(410, 180));
+    await tester.pump();
+    expect(find.byType(Slider), findsOneWidget);
+
+    final gesture = await tester.startGesture(const Offset(410, 180));
+    await gesture.moveBy(const Offset(24, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(100, 0));
+    await tester.pump();
+
+    expect(find.textContaining('+00:'), findsOneWidget);
+    expect(find.byType(Slider), findsNothing);
+
+    await gesture.up();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('vertical drag on left adjusts screen brightness',
+      (tester) async {
+    tester.view.physicalSize = const Size(820, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            const _TestSettingsRepository(),
+          ),
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FullScreenPlayerScreen(videoId: 'video-001'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await tester.startGesture(const Offset(150, 220));
+    await gesture.moveBy(const Offset(0, -80));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('brightness-adjustment-overlay')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('+00:'), findsNothing);
+
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(
+      find.byKey(const ValueKey('brightness-adjustment-overlay')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('vertical drag on right adjusts media volume', (tester) async {
+    tester.view.physicalSize = const Size(820, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            const _TestSettingsRepository(),
+          ),
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FullScreenPlayerScreen(videoId: 'video-001'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await tester.startGesture(const Offset(670, 220));
+    await gesture.moveBy(const Offset(0, -80));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('volume-adjustment-overlay')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('+00:'), findsNothing);
+
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(
+      find.byKey(const ValueKey('volume-adjustment-overlay')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('saves playback position when returning from fullscreen player',
+      (tester) async {
+    final repository = InMemoryVideoRepository.seeded();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            const _TestSettingsRepository(),
+          ),
+          videoRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: FullScreenPlayerScreen(videoId: 'video-001'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tapAt(const Offset(180, 300));
+    await tester.pump();
+    await tester.drag(find.byType(Slider), const Offset(120, 0));
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    final videos = await repository.watchVideos(const VideoQuery()).first;
+    final video = videos.firstWhere((video) => video.id == 'video-001');
+
+    expect(video.lastPlayedPosition, isNotNull);
+    expect(video.lastPlayedPosition, greaterThan(Duration.zero));
+  });
+
+  testWidgets('lock hides controls and unlock restores them', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            const _TestSettingsRepository(),
+          ),
+          videoRepositoryProvider.overrideWithValue(
+            InMemoryVideoRepository.seeded(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FullScreenPlayerScreen(videoId: 'video-001'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tapAt(const Offset(180, 300));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('ロック'));
+    await tester.pump();
+    expect(find.byType(Slider), findsNothing);
+    expect(find.byTooltip('ロック解除'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('ロック解除'));
+    await tester.pump();
+    expect(find.byType(Slider), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

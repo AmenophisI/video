@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../shared/utils/duration_format.dart';
 import '../../../shared/utils/file_name_utils.dart';
 import '../../media_access/data/file_operations/file_operation_adapter.dart';
+import '../../settings/presentation/settings_screen.dart';
 import '../../video/application/video_providers.dart';
 import '../../video/domain/video.dart';
 import '../../video/domain/video_query.dart';
@@ -24,67 +26,197 @@ class FolderListScreen extends ConsumerStatefulWidget {
 }
 
 class _FolderListScreenState extends ConsumerState<FolderListScreen> {
-  FolderSortKey _sortKey = FolderSortKey.name;
-  FolderSortOrder _sortOrder = FolderSortOrder.ascending;
+  final FolderSortKey _sortKey = FolderSortKey.name;
+  final FolderSortOrder _sortOrder = FolderSortOrder.ascending;
+  final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
+  final Set<String> _hiddenFolderIds = {};
+  _FolderViewMode _viewMode = _FolderViewMode.list;
+  String _searchText = '';
+  bool _searchMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_restoreHiddenFolders);
+  }
 
   @override
   Widget build(BuildContext context) {
     final foldersAsync = ref.watch(folderListProvider);
 
-    return Stack(
-      children: [
-        foldersAsync.when(
-          data: (folders) {
-            final sortedFolders = _sortFolders(folders);
-            if (sortedFolders.isEmpty) {
-              return const Center(child: Text('フォルダが見つかりません'));
-            }
+    return PopScope<void>(
+      canPop: !_searchMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _searchMode) {
+          setState(() {
+            _searchMode = false;
+            _searchText = '';
+          });
+        }
+      },
+      child: Stack(
+        children: [
+          foldersAsync.when(
+            data: (folders) {
+              final sortedFolders = _sortFolders(
+                _filterFolders(
+                  folders
+                      .where((folder) => !_hiddenFolderIds.contains(folder.id))
+                      .toList(growable: false),
+                ),
+              );
 
-            return Column(
-              children: [
-                _FolderSortToolbar(
-                  sortKey: _sortKey,
-                  sortOrder: _sortOrder,
-                  onSortKeyChanged: (sortKey) {
-                    setState(() {
-                      _sortKey = sortKey;
-                    });
-                  },
-                  onToggleFolderSortOrder: () {
-                    setState(() {
-                      _sortOrder = _sortOrder == FolderSortOrder.ascending
-                          ? FolderSortOrder.descending
-                          : FolderSortOrder.ascending;
-                    });
-                  },
-                ),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                    itemCount: sortedFolders.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      return _FolderTile(folder: sortedFolders[index]);
-                    },
+              return Column(
+                children: [
+                  if (_searchMode)
+                    SafeArea(
+                      bottom: false,
+                      child: _FolderSearchBar(
+                        onBack: () {
+                          setState(() {
+                            _searchMode = false;
+                            _searchText = '';
+                          });
+                        },
+                        onChanged: (value) {
+                          setState(() {
+                            _searchText = value;
+                          });
+                        },
+                      ),
+                    )
+                  else
+                    SafeArea(
+                      bottom: false,
+                      child: _FolderSortToolbar(
+                        viewMode: _viewMode,
+                        onToggleViewMode: () {
+                          setState(() {
+                            _viewMode = _viewMode.next;
+                          });
+                        },
+                        onSearch: () {
+                          setState(() {
+                            _searchMode = true;
+                          });
+                        },
+                        onCreateFolder: () =>
+                            _showCreateFolderDialog(context, ref),
+                        onHideFolders: () => _showHiddenFolders(folders),
+                        onOpenAbout: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: sortedFolders.isEmpty
+                        ? const Center(child: Text('フォルダが見つかりません'))
+                        : _viewMode != _FolderViewMode.list
+                            ? GridView.builder(
+                                padding:
+                                    const EdgeInsets.fromLTRB(14, 2, 14, 24),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount:
+                                      _viewMode == _FolderViewMode.enlarged
+                                          ? 1
+                                          : 3,
+                                  mainAxisSpacing: 14,
+                                  crossAxisSpacing: 14,
+                                  childAspectRatio:
+                                      _viewMode == _FolderViewMode.enlarged
+                                          ? 1.55
+                                          : 0.92,
+                                ),
+                                itemCount: sortedFolders.length,
+                                itemBuilder: (context, index) {
+                                  return _FolderTile(
+                                    folder: sortedFolders[index],
+                                    displayMode: _FolderTileDisplayMode.grid,
+                                  );
+                                },
+                              )
+                            : ListView.separated(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                itemCount: sortedFolders.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 4),
+                                itemBuilder: (context, index) {
+                                  return _FolderTile(
+                                    folder: sortedFolders[index],
+                                    displayMode: _FolderTileDisplayMode.list,
+                                  );
+                                },
+                              ),
                   ),
-                ),
-              ],
-            );
-          },
-          error: (error, _) => Center(child: Text(error.toString())),
-          loading: () => const Center(child: CircularProgressIndicator()),
-        ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton.extended(
-            heroTag: 'create-folder',
-            onPressed: () => _showCreateFolderDialog(context, ref),
-            icon: const Icon(Icons.create_new_folder),
-            label: const Text('フォルダ作成'),
+                ],
+              );
+            },
+            error: (error, _) => Center(child: Text(error.toString())),
+            loading: () => const Center(child: CircularProgressIndicator()),
           ),
+        ],
+      ),
+    );
+  }
+
+  List<Folder> _filterFolders(List<Folder> folders) {
+    final keyword = _searchText.trim().toLowerCase();
+    if (keyword.isEmpty) {
+      return folders;
+    }
+
+    return folders.where((folder) {
+      return folder.name.toLowerCase().contains(keyword) ||
+          (folder.storageLabel?.toLowerCase().contains(keyword) ?? false);
+    }).toList();
+  }
+
+  Future<void> _restoreHiddenFolders() async {
+    final ids =
+        await _preferences.getStringList(_hiddenFolderIdsPreferenceKey) ??
+            const <String>[];
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _hiddenFolderIds
+        ..clear()
+        ..addAll(ids);
+    });
+  }
+
+  Future<void> _showHiddenFolders(List<Folder> folders) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _HiddenFoldersScreen(
+          folders: folders,
+          initiallyHidden: _hiddenFolderIds,
+          onChanged: _setFolderHidden,
         ),
-      ],
+      ),
+    );
+  }
+
+  Future<void> _setFolderHidden(String folderId, bool hidden) async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      if (hidden) {
+        _hiddenFolderIds.add(folderId);
+      } else {
+        _hiddenFolderIds.remove(folderId);
+      }
+    });
+    await _preferences.setStringList(
+      _hiddenFolderIdsPreferenceKey,
+      _hiddenFolderIds.toList(growable: false),
     );
   }
 
@@ -109,31 +241,48 @@ class _FolderListScreenState extends ConsumerState<FolderListScreen> {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    final videos = await ref
-        .read(videoRepositoryProvider)
-        .watchVideos(
-          const VideoQuery(),
-        )
-        .first;
-    if (!context.mounted) {
-      return;
-    }
-
-    final relativePath = await showDialog<String>(
+    final controller = TextEditingController(text: 'フォルダ1');
+    var folderName = controller.text;
+    final selectedName = await showDialog<String>(
       context: context,
-      builder: (context) => RelativePathPickerDialog(
-        title: 'フォルダ作成',
-        actionLabel: '作成',
-        initialPath: 'Movies/NewFolder',
-        inputLabel: '作成するフォルダ',
-        folderOptions:
-            videos.map((video) => video.relativePath).whereType<String>(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('フォルダを作成'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'フォルダ名'),
+            onChanged: (value) {
+              setDialogState(() {
+                folderName = value.trim();
+              });
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: folderName.isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(folderName),
+              child: const Text('作成'),
+            ),
+          ],
+        ),
       ),
     );
+    Future<void>.delayed(
+      const Duration(milliseconds: 400),
+      controller.dispose,
+    );
 
-    if (relativePath == null || relativePath.isEmpty) {
+    if (selectedName == null || selectedName.isEmpty) {
       return;
     }
+
+    final relativePath = 'Movies/$selectedName';
 
     final validationMessage = validateRelativePath(relativePath);
     if (validationMessage != null) {
@@ -181,63 +330,193 @@ class _FolderListScreenState extends ConsumerState<FolderListScreen> {
   }
 }
 
-class _FolderSortToolbar extends StatelessWidget {
-  const _FolderSortToolbar({
-    required this.sortKey,
-    required this.sortOrder,
-    required this.onSortKeyChanged,
-    required this.onToggleFolderSortOrder,
+const String _hiddenFolderIdsPreferenceKey = 'folders.hiddenFolderIds';
+
+class _HiddenFoldersScreen extends StatefulWidget {
+  const _HiddenFoldersScreen({
+    required this.folders,
+    required this.initiallyHidden,
+    required this.onChanged,
   });
 
-  final FolderSortKey sortKey;
-  final FolderSortOrder sortOrder;
-  final ValueChanged<FolderSortKey> onSortKeyChanged;
-  final VoidCallback onToggleFolderSortOrder;
+  final List<Folder> folders;
+  final Set<String> initiallyHidden;
+  final Future<void> Function(String folderId, bool hidden) onChanged;
+
+  @override
+  State<_HiddenFoldersScreen> createState() => _HiddenFoldersScreenState();
+}
+
+class _HiddenFoldersScreenState extends State<_HiddenFoldersScreen> {
+  late final Set<String> _hiddenFolderIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _hiddenFolderIds = {...widget.initiallyHidden};
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('フォルダを非表示')),
+      body: ListView.builder(
+        itemCount: widget.folders.length,
+        itemBuilder: (context, index) {
+          final folder = widget.folders[index];
+          final lowerName = folder.name.toLowerCase();
+          final canHide = lowerName != 'camera' && lowerName != 'download';
+          final hidden = _hiddenFolderIds.contains(folder.id);
+
+          return SwitchListTile(
+            title: Text(folder.name),
+            subtitle: Text('${folder.videoCount}件'),
+            value: hidden,
+            onChanged: canHide
+                ? (value) {
+                    setState(() {
+                      if (value) {
+                        _hiddenFolderIds.add(folder.id);
+                      } else {
+                        _hiddenFolderIds.remove(folder.id);
+                      }
+                    });
+                    unawaited(widget.onChanged(folder.id, value));
+                  }
+                : null,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FolderSearchBar extends StatelessWidget {
+  const _FolderSearchBar({required this.onBack, required this.onChanged});
+
+  final VoidCallback onBack;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(13, 0, 13, 8),
+      child: TextField(
+        autofocus: true,
+        decoration: InputDecoration(
+          prefixIcon: IconButton(
+            tooltip: '戻る',
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back),
+          ),
+          hintText: '検索',
+        ),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _FolderSortToolbar extends StatelessWidget {
+  const _FolderSortToolbar({
+    required this.viewMode,
+    required this.onToggleViewMode,
+    required this.onSearch,
+    required this.onCreateFolder,
+    required this.onHideFolders,
+    required this.onOpenAbout,
+  });
+
+  final _FolderViewMode viewMode;
+  final VoidCallback onToggleViewMode;
+  final VoidCallback onSearch;
+  final VoidCallback onCreateFolder;
+  final VoidCallback onHideFolders;
+  final VoidCallback onOpenAbout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 3, 12, 8),
       child: Row(
         children: [
-          Expanded(
-            child: DropdownButtonFormField<FolderSortKey>(
-              value: sortKey,
-              decoration: const InputDecoration(
-                labelText: 'フォルダ並び替え',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: FolderSortKey.name,
-                  child: Text('フォルダ名'),
-                ),
-                DropdownMenuItem(
-                  value: FolderSortKey.videoCount,
-                  child: Text('動画件数'),
-                ),
-                DropdownMenuItem(
-                  value: FolderSortKey.latestModifiedAt,
-                  child: Text('更新日時'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  onSortKeyChanged(value);
-                }
-              },
-            ),
+          const Spacer(),
+          IconButton(
+            tooltip: viewMode.next.label,
+            color: Theme.of(context).colorScheme.primary,
+            onPressed: onToggleViewMode,
+            icon: Icon(viewMode.next.icon),
           ),
-          const SizedBox(width: 8),
-          IconButton.filledTonal(
-            tooltip: sortOrder == FolderSortOrder.ascending ? '昇順' : '降順',
-            onPressed: onToggleFolderSortOrder,
-            icon: Icon(
-              sortOrder == FolderSortOrder.ascending
-                  ? Icons.north
-                  : Icons.south,
-            ),
+          IconButton(
+            tooltip: '検索',
+            onPressed: onSearch,
+            icon: const Icon(Icons.search),
+          ),
+          PopupMenuButton<_FolderMenuAction>(
+            tooltip: 'その他',
+            onSelected: (action) {
+              switch (action) {
+                case _FolderMenuAction.edit:
+                  showDialog<void>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('フォルダを編集'),
+                      content: const Text('各フォルダのメニューから名前変更または削除を選択できます。'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('閉じる'),
+                        ),
+                      ],
+                    ),
+                  );
+                case _FolderMenuAction.create:
+                  onCreateFolder();
+                case _FolderMenuAction.hide:
+                  onHideFolders();
+                case _FolderMenuAction.about:
+                  onOpenAbout();
+                case _FolderMenuAction.contact:
+                  showDialog<void>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('お問い合わせ'),
+                      content: const Text(
+                        'アプリに関するお問い合わせは、配布元のサポート窓口をご利用ください。',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('閉じる'),
+                        ),
+                      ],
+                    ),
+                  );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: _FolderMenuAction.edit,
+                child: Text('編集'),
+              ),
+              PopupMenuItem(
+                value: _FolderMenuAction.create,
+                child: Text('フォルダを作成'),
+              ),
+              PopupMenuItem(
+                value: _FolderMenuAction.hide,
+                child: Text('フォルダを非表示'),
+              ),
+              PopupMenuDivider(),
+              PopupMenuItem(
+                value: _FolderMenuAction.about,
+                child: Text('ビデオについて'),
+              ),
+              PopupMenuItem(
+                value: _FolderMenuAction.contact,
+                child: Text('お問い合わせ'),
+              ),
+            ],
           ),
         ],
       ),
@@ -256,10 +535,48 @@ enum FolderSortOrder {
   descending,
 }
 
+enum _FolderViewMode {
+  list,
+  grid,
+  enlarged,
+}
+
+extension on _FolderViewMode {
+  _FolderViewMode get next => switch (this) {
+        _FolderViewMode.list => _FolderViewMode.grid,
+        _FolderViewMode.grid => _FolderViewMode.enlarged,
+        _FolderViewMode.enlarged => _FolderViewMode.list,
+      };
+
+  String get label => switch (this) {
+        _FolderViewMode.list => 'リスト表示',
+        _FolderViewMode.grid => 'グリッド表示',
+        _FolderViewMode.enlarged => '拡大表示',
+      };
+
+  IconData get icon => switch (this) {
+        _FolderViewMode.list => Icons.view_list,
+        _FolderViewMode.grid => Icons.grid_view,
+        _FolderViewMode.enlarged => Icons.view_agenda_outlined,
+      };
+}
+
+enum _FolderMenuAction {
+  edit,
+  create,
+  hide,
+  about,
+  contact,
+}
+
 class _FolderTile extends ConsumerWidget {
-  const _FolderTile({required this.folder});
+  const _FolderTile({
+    required this.folder,
+    required this.displayMode,
+  });
 
   final Folder folder;
+  final _FolderTileDisplayMode displayMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -269,85 +586,109 @@ class _FolderTile extends ConsumerWidget {
             .watch(videoByIdProvider(folder.representativeVideoId!))
             .valueOrNull;
 
+    final thumbnail = ClipRRect(
+      borderRadius: BorderRadius.circular(
+          displayMode == _FolderTileDisplayMode.grid ? 16 : 11),
+      child: representativeVideo == null
+          ? ColoredBox(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Icon(
+                Icons.folder_outlined,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            )
+          : VideoThumbnail(video: representativeVideo),
+    );
+
+    final subtitle = [
+      '${folder.videoCount}件',
+      if (folder.totalSizeBytes != null) formatFileSize(folder.totalSizeBytes),
+      if (folder.storageLabel?.isNotEmpty == true) folder.storageLabel!,
+      if (folder.latestModifiedAt != null)
+        '更新 ${formatDate(folder.latestModifiedAt)}',
+    ].join(' ・ ');
+
     return Semantics(
+      container: true,
       label: '${folder.name} フォルダ、動画${folder.videoCount}件',
       button: true,
       onTapHint: 'フォルダ内の動画を表示します',
-      child: Card(
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: ListTile(
-          leading: SizedBox(
-            width: 64,
-            height: 40,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: representativeVideo == null
-                  ? ColoredBox(
-                      color: Theme.of(context).colorScheme.secondaryContainer,
-                      child: Icon(
-                        Icons.folder,
-                        color:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
-                      ),
-                    )
-                  : VideoThumbnail(video: representativeVideo),
-            ),
-          ),
-          title: Text(
-            folder.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Text(
-            [
-              '${folder.videoCount}件',
-              if (folder.totalSizeBytes != null)
-                formatFileSize(folder.totalSizeBytes),
-              if (folder.storageLabel?.isNotEmpty == true) folder.storageLabel!,
-              if (folder.latestModifiedAt != null)
-                '更新 ${formatDate(folder.latestModifiedAt)}',
-            ].join(' ・ '),
-          ),
-          trailing: PopupMenuButton<_FolderAction>(
-            key: ValueKey('folder-actions-${folder.id}'),
-            onSelected: (action) async {
-              switch (action) {
-                case _FolderAction.open:
-                  _openFolder(context);
-                case _FolderAction.rename:
-                  await _renameFolder(context, ref);
-                case _FolderAction.delete:
-                  await _deleteFolder(context, ref);
-              }
+      child: ExcludeSemantics(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              _openFolder(context);
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: _FolderAction.open,
-                child: ListTile(
-                  leading: Icon(Icons.chevron_right),
-                  title: Text('開く'),
-                ),
-              ),
-              PopupMenuItem(
-                value: _FolderAction.rename,
-                child: ListTile(
-                  leading: Icon(Icons.drive_file_move_outline),
-                  title: Text('フォルダ名変更'),
-                ),
-              ),
-              PopupMenuItem(
-                value: _FolderAction.delete,
-                child: ListTile(
-                  leading: Icon(Icons.delete_outline),
-                  title: Text('フォルダ削除'),
-                ),
-              ),
-            ],
+            child: displayMode == _FolderTileDisplayMode.grid
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            thumbnail,
+                            Positioned(
+                              right: 2,
+                              top: 2,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surface
+                                      .withValues(alpha: 0.88),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: _FolderActionsButton(folder: folder),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        folder.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      Text(
+                        '${folder.videoCount}件',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  )
+                : ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                    leading: SizedBox(
+                      width: 60,
+                      height: 42,
+                      child: thumbnail,
+                    ),
+                    title: Text(
+                      folder.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: _FolderActionsButton(folder: folder),
+                  ),
           ),
-          onTap: () {
-            _openFolder(context);
-          },
         ),
       ),
     );
@@ -667,6 +1008,61 @@ class _FolderTile extends ConsumerWidget {
           video,
     ];
   }
+}
+
+class _FolderActionsButton extends ConsumerWidget {
+  const _FolderActionsButton({required this.folder});
+
+  final Folder folder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<_FolderAction>(
+      key: ValueKey('folder-actions-${folder.id}'),
+      onSelected: (action) async {
+        final tile = _FolderTile(
+          folder: folder,
+          displayMode: _FolderTileDisplayMode.list,
+        );
+        switch (action) {
+          case _FolderAction.open:
+            tile._openFolder(context);
+          case _FolderAction.rename:
+            await tile._renameFolder(context, ref);
+          case _FolderAction.delete:
+            await tile._deleteFolder(context, ref);
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _FolderAction.open,
+          child: ListTile(
+            leading: Icon(Icons.chevron_right),
+            title: Text('開く'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _FolderAction.rename,
+          child: ListTile(
+            leading: Icon(Icons.drive_file_move_outline),
+            title: Text('フォルダ名変更'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _FolderAction.delete,
+          child: ListTile(
+            leading: Icon(Icons.delete_outline),
+            title: Text('フォルダ削除'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _FolderTileDisplayMode {
+  grid,
+  list,
 }
 
 enum _FolderAction {

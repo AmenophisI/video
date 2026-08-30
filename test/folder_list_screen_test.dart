@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:video_player/src/modules/folder/presentation/folder_list_screen.dart';
 import 'package:video_player/src/modules/video/application/video_providers.dart';
 import 'package:video_player/src/modules/video/data/repositories/in_memory_video_repository.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+  });
+
   testWidgets('folder list exposes accessible folder rows', (tester) async {
     final semantics = tester.ensureSemantics();
     try {
@@ -32,7 +39,7 @@ void main() {
     }
   });
 
-  testWidgets('folder creation uses the folder path picker', (tester) async {
+  testWidgets('folder creation uses the Samsung name dialog', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -47,14 +54,15 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('フォルダ作成'));
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('フォルダを作成'));
     await tester.pumpAndSettle();
 
-    expect(find.text('フォルダ作成'), findsWidgets);
-    expect(find.text('作成するフォルダ'), findsOneWidget);
-    expect(find.text('既存フォルダ'), findsOneWidget);
-    expect(find.text('Movies/NewFolder'), findsWidgets);
-    expect(find.text('Download'), findsWidgets);
+    expect(find.text('フォルダを作成'), findsWidgets);
+    expect(find.text('フォルダ名'), findsOneWidget);
+    expect(find.text('フォルダ1'), findsOneWidget);
+    expect(find.text('キャンセル'), findsOneWidget);
   });
 
   testWidgets('folder creation maps platform errors to readable messages',
@@ -90,7 +98,9 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('フォルダ作成'));
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('フォルダを作成'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(

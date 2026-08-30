@@ -21,6 +21,13 @@ class FileOperationAdapter {
     );
   }
 
+  Future<void> moveToSecureFolder(List<Uri> uris) async {
+    await _channel.invokeMethod<void>(
+      'moveToSecureFolder',
+      {'uris': uris.map((uri) => uri.toString()).toList(growable: false)},
+    );
+  }
+
   Future<void> openEditor(Uri uri) async {
     await _channel.invokeMethod<void>(
       'openEditor',

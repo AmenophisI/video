@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Google Drive連携 画面設計書</title>
+  <style>
+    :root {
+      --bg: #090c12;
+      --surface: #11161f;
+      --surface-2: #171e29;
+      --surface-3: #202a38;
+      --line: #2b3748;
+      --text: #f2f6fc;
+      --muted: #a7b3c3;
+      --accent: #73a9ff;
+      --accent-2: #8dbaff;
+      --green: #58d68d;
+      --amber: #f8c66d;
+      --red: #ff7878;
+      --purple: #b69cff;
+      --radius: 22px;
+      --shadow: 0 22px 70px rgba(0,0,0,.34);
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+    body {
+      margin: 0;
+      color: var(--text);
+      line-height: 1.7;
+      background:
+        radial-gradient(circle at 12% -4%, rgba(115,169,255,.17), transparent 33rem),
+        radial-gradient(circle at 94% 12%, rgba(88,214,141,.08), transparent 27rem),
+        var(--bg);
+    }
+    a { color: #9bc2ff; }
+    code { color: #d7e6ff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+    h1, h2, h3, h4 { margin: 0; line-height: 1.3; letter-spacing: .01em; }
+    h2 { font-size: clamp(1.5rem, 3vw, 2.05rem); }
+    h3 { font-size: 1.12rem; }
+    p { margin: .65rem 0 0; }
+    ul, ol { margin: .6rem 0 0; padding-left: 1.35rem; }
+    li + li { margin-top: .3rem; }
+    .muted { color: var(--muted); }
+    .hero {
+      min-height: 420px;
+      display: grid;
+      place-items: center;
+      padding: 70px 28px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(150deg, rgba(21,29,42,.95), rgba(8,11,17,.78));
+    }
+    .hero-inner { width: min(1120px, 100%); }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border: 1px solid rgba(115,169,255,.38);
+      border-radius: 999px;
+      color: #a9c9ff;
+      background: rgba(115,169,255,.08);
+      font-size: .76rem;
+      font-weight: 850;
+      letter-spacing: .1em;
+    }
+    .hero h1 { margin-top: 20px; font-size: clamp(2.2rem, 7vw, 4.55rem); max-width: 960px; }
+    .lead { max-width: 900px; color: var(--muted); font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 20px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 25px; }
+    .badge, .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.035);
+      font-size: .76rem;
+      font-weight: 780;
+    }
+    .badge strong { color: #fff; }
+    .status.planned { color: #decfff; border-color: rgba(182,156,255,.4); background: rgba(182,156,255,.1); }
+    .status.system { color: #ffe0a0; border-color: rgba(248,198,109,.42); background: rgba(248,198,109,.1); }
+    .status.allowed { color: #baf2d2; border-color: rgba(88,214,141,.4); background: rgba(88,214,141,.1); }
+    .status.conditional { color: #ffe1a6; border-color: rgba(248,198,109,.42); background: rgba(248,198,109,.1); }
+    .status.blocked { color: #ffc1c1; border-color: rgba(255,120,120,.4); background: rgba(255,120,120,.1); }
+    .layout {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 250px minmax(0,1fr);
+      gap: 34px;
+      padding: 38px 28px 100px;
+    }
+    .toc {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(17,22,31,.84);
+      backdrop-filter: blur(16px);
+    }
+    .toc b { display: block; color: var(--muted); font-size: .78rem; letter-spacing: .1em; margin-bottom: 6px; }
+    .toc a { display: block; color: #cbd6e4; text-decoration: none; padding: 7px 8px; border-radius: 9px; font-size: .87rem; }
+    .toc a:hover { color: #fff; background: var(--surface-3); }
+    main { min-width: 0; }
+    section { margin-top: 72px; }
+    section:first-child { margin-top: 0; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-head p { max-width: 760px; color: var(--muted); font-size: .92rem; }
+    .grid { display: grid; gap: 16px; margin-top: 20px; }
+    .cols-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .cols-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .card {
+      min-width: 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(24,31,43,.96), rgba(15,20,29,.96));
+      box-shadow: var(--shadow);
+    }
+    .metric { font-size: 1.45rem; font-weight: 860; }
+    .callout {
+      margin-top: 20px;
+      padding: 15px 18px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 14px 14px 0;
+      background: rgba(115,169,255,.08);
+    }
+    .callout.warn { border-left-color: var(--amber); background: rgba(248,198,109,.08); }
+    .callout.danger { border-left-color: var(--red); background: rgba(255,120,120,.08); }
+    .table-wrap {
+      min-width: 0;
+      max-width: 100%;
+      overflow: auto;
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(10,14,21,.72);
+    }
+    table { width: 100%; min-width: 800px; border-collapse: collapse; font-size: .86rem; }
+    th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(43,55,72,.75); }
+    th { position: sticky; top: 0; z-index: 1; color: #eef5ff; background: #1a2330; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    .boundary {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .boundary-box { min-height: 150px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); }
+    .boundary-arrow { color: var(--accent); font-size: 2rem; font-weight: 900; }
+    .flow-scroll { max-width: 100%; overflow-x: auto; margin-top: 20px; border: 1px solid var(--line); border-radius: 18px; background: #090d14; }
+    .flow-scroll svg { display: block; min-width: 1050px; width: 100%; height: auto; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; color: var(--muted); font-size: .8rem; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+    .tokens { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+    .swatch { min-height: 105px; padding: 14px; display: flex; flex-direction: column; justify-content: end; border: 1px solid var(--line); border-radius: 15px; }
+    .screens { display: grid; gap: 24px; margin-top: 24px; }
+    .screen-card { overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: rgba(15,20,29,.97); box-shadow: var(--shadow); }
+    .screen-card > header { display: flex; justify-content: space-between; align-items: start; gap: 18px; padding: 21px 24px 17px; border-bottom: 1px solid var(--line); }
+    .screen-card .id { color: #a9c9ff; font: 850 .78rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+    .screen-card h3 { margin-top: 4px; }
+    .screen-body { display: grid; grid-template-columns: minmax(280px,.8fr) minmax(420px,1.2fr); gap: 24px; padding: 22px; }
+    .phone-wrap { display: grid; place-items: start center; }
+    .phone {
+      width: min(100%, 330px);
+      min-height: 610px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #3b485b;
+      border-radius: 34px;
+      color: #f4f6fa;
+      background: #080a0e;
+      box-shadow: 0 18px 45px rgba(0,0,0,.45);
+    }
+    .phone.system-boundary { background: #16191f; }
+    .statusbar { height: 28px; padding: 7px 18px 0; display: flex; justify-content: space-between; color: #dfe6ef; font-size: .66rem; }
+    .appbar { min-height: 64px; padding: 14px 18px 9px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .appbar.large { min-height: 92px; align-items: end; }
+    .appbar .title { font-size: 1.38rem; font-weight: 820; }
+    .appbar .small-title { font-size: 1rem; font-weight: 760; }
+    .icon-btn { min-width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 50%; color: #eef3fa; background: rgba(255,255,255,.04); font-size: 1.1rem; }
+    .search { margin: 5px 15px 9px; padding: 10px 14px; border-radius: 22px; color: #8995a5; background: #20252d; font-size: .76rem; }
+    .toolbar { padding: 5px 17px 10px; display: flex; justify-content: space-between; align-items: center; color: #bfc9d7; font-size: .72rem; }
+    .content { flex: 1; min-height: 0; padding: 5px 14px 16px; position: relative; }
+    .list-row { min-height: 62px; display: grid; grid-template-columns: 76px 1fr auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid #1d232c; }
+    .thumb { height: 48px; border-radius: 9px; background: linear-gradient(145deg,#38485e,#202936); position: relative; overflow: hidden; }
+    .thumb::after { content: "0:42"; position: absolute; right: 4px; bottom: 3px; padding: 1px 4px; border-radius: 5px; background: rgba(0,0,0,.68); font-size: .53rem; }
+    .meta .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; font-weight: 700; }
+    .meta .sub { color: #8f9bac; font-size: .61rem; margin-top: 2px; }
+    .drive-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px; border-radius: 999px; color: #cfe0ff; background: rgba(75,130,220,.18); font-size: .54rem; font-weight: 800; vertical-align: 1px; }
+    .drive-dot { width: 6px; height: 6px; border-radius: 2px; background: linear-gradient(135deg,#4285f4 0 36%,#34a853 36% 67%,#fbbc04 67% 84%,#ea4335 84%); }
+    .folder-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+    .folder-card { min-height: 100px; padding: 12px; border-radius: 15px; background: #171c24; border: 1px solid #242c38; }
+    .folder-card .folder-icon { width: 42px; height: 31px; margin-bottom: 10px; border-radius: 7px; background: #61738d; }
+    .folder-card .name { font-size: .75rem; font-weight: 760; }
+    .folder-card .sub { color: #8e9aaa; font-size: .58rem; margin-top: 3px; }
+    .bottomnav { min-height: 60px; padding: 7px 10px 8px; display: grid; grid-template-columns: repeat(4,1fr); border-top: 1px solid #1f2630; background: #0e1218; }
+    .nav-item { display: grid; place-items: center; align-content: center; gap: 1px; color: #7f8997; font-size: .58rem; }
+    .nav-item b { font-size: .95rem; line-height: 1; }
+    .nav-item.on { color: var(--accent); }
+    .sheet {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      padding: 10px;
+      border: 1px solid #394554;
+      border-radius: 22px;
+      background: #242b35;
+      box-shadow: 0 16px 45px rgba(0,0,0,.55);
+    }
+    .sheet-title { padding: 7px 10px 9px; color: #aeb9c7; font-size: .64rem; }
+    .menu-row { min-height: 44px; padding: 10px 11px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-radius: 11px; font-size: .76rem; }
+    .menu-row + .menu-row { border-top: 1px solid rgba(255,255,255,.055); }
+    .menu-row.disabled { color: #687383; }
+    .panel { padding: 15px; border: 1px solid #2e3948; border-radius: 17px; background: #171c24; }
+    .panel + .panel { margin-top: 10px; }
+    .panel-title { font-size: .78rem; font-weight: 790; }
+    .panel-text { color: #a2adbb; font-size: .66rem; margin-top: 6px; }
+    .drive-hero { width: 62px; height: 62px; margin: 18px auto 15px; display: grid; place-items: center; border-radius: 20px; color: white; background: linear-gradient(145deg,#416fcb,#2f56a2); font-weight: 900; box-shadow: 0 13px 32px rgba(65,111,203,.32); }
+    .center { text-align: center; }
+    .primary, .secondary, .danger-btn {
+      min-height: 42px;
+      padding: 10px 14px;
+      display: grid;
+      place-items: center;
+      border-radius: 21px;
+      font-size: .72rem;
+      font-weight: 800;
+    }
+    .primary { color: #06101f; background: #8dbaff; }
+    .secondary { color: #dbe7f7; background: #28313e; }
+    .danger-btn { color: #210505; background: #ff8f8f; }
+    .button-stack { display: grid; gap: 8px; margin-top: 16px; }
+    .system-box { margin: 18px 14px; padding: 20px; border: 1px dashed #5b6573; border-radius: 18px; background: #20242c; text-align: center; }
+    .system-box .mark { width: 46px; height: 46px; margin: 0 auto 12px; display: grid; place-items: center; border-radius: 50%; background: #323844; font-weight: 900; }
+    .progress { height: 7px; overflow: hidden; margin-top: 11px; border-radius: 999px; background: #29313d; }
+    .progress > i { display: block; height: 100%; width: 58%; border-radius: inherit; background: var(--accent); }
+    .info-row { min-height: 42px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #252c36; font-size: .7rem; }
+    .info-row:last-child { border-bottom: 0; }
+    .info-row span:last-child { color: #a9b4c3; text-align: right; }
+    .preview { height: 145px; display: grid; place-items: center; border-radius: 16px; color: #9faabc; background: linear-gradient(145deg,#28384c,#121a24); font-size: .72rem; }
+    .segment { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 5px 14px 12px; padding: 4px; border-radius: 20px; background: #1a2029; }
+    .segment span { padding: 7px; border-radius: 16px; color: #8995a5; text-align: center; font-size: .66rem; }
+    .segment .on { color: #07101d; background: #8dbaff; font-weight: 800; }
+    .breadcrumb { margin: 0 14px 8px; color: #9faabb; font-size: .62rem; }
+    .dialog-backdrop { position: absolute; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(0,0,0,.58); }
+    .dialog { width: 100%; padding: 18px; border: 1px solid #414b59; border-radius: 22px; background: #252b34; box-shadow: 0 18px 50px rgba(0,0,0,.55); }
+    .dialog h4 { font-size: .92rem; }
+    .dialog p { color: #aeb8c5; font-size: .68rem; }
+    .input { margin-top: 14px; padding: 11px 12px; border: 1px solid #536071; border-radius: 12px; color: #e9eef5; background: #171c22; font-size: .72rem; }
+    .actions { display: flex; justify-content: end; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .actions span { padding: 7px 10px; border-radius: 12px; color: #aac9ff; font-size: .66rem; font-weight: 780; }
+    .actions .danger-action { color: #ff9b9b; }
+    .state-stack { display: grid; gap: 8px; }
+    .state-item { padding: 10px 11px; border: 1px solid #303a47; border-radius: 12px; background: #171c23; }
+    .state-item b { display: block; font-size: .7rem; }
+    .state-item span { display: block; color: #9aa6b5; font-size: .61rem; margin-top: 2px; }
+    .spec dl { display: grid; grid-template-columns: 105px minmax(0,1fr); gap: 8px 12px; margin: 0; font-size: .87rem; }
+    .spec dt { color: var(--muted); font-weight: 750; }
+    .spec dd { margin: 0; }
+    .spec h4 { margin-top: 18px; color: #cdd8e6; font-size: .84rem; }
+    details { margin-top: 15px; border: 1px solid var(--line); border-radius: 14px; background: rgba(16,22,31,.72); }
+    summary { cursor: pointer; padding: 13px 16px; font-weight: 800; }
+    details > div { padding: 0 16px 16px; color: var(--muted); }
+    .footer { margin-top: 72px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+    @media (max-width: 1120px) {
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; max-height: none; display: grid; grid-template-columns: repeat(3,1fr); gap: 2px 8px; }
+      .toc b { grid-column: 1/-1; }
+      .tokens { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 760px) {
+      .hero { min-height: 0; padding: 52px 20px; }
+      .layout { padding: 24px 14px 70px; }
+      .toc { grid-template-columns: repeat(2,1fr); }
+      .cols-2, .cols-3, .screen-body, .boundary { grid-template-columns: 1fr; }
+      .boundary-arrow { transform: rotate(90deg); text-align: center; }
+      .tokens { grid-template-columns: repeat(2,1fr); }
+      .screen-card > header, .section-head { display: block; }
+      .screen-card > header .status { margin-top: 10px; }
+      .screen-body { padding: 16px; }
+      .phone { min-height: 600px; }
+      table { min-width: 720px; }
+    }
+    @media print {
+      body { color: #111; background: #fff; }
+      .hero { color: #fff; background: #101722; }
+      .layout { display: block; max-width: none; padding: 20px; }
+      .toc { display: none; }
+      section { break-before: page; }
+      .card, .screen-card, .table-wrap { color: #111; background: #fff; box-shadow: none; }
+      .screen-card { break-inside: avoid; }
+      .muted, .section-head p { color: #444; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">PROPOSED SPECIFICATION · 未実装</span>
+      <h1>Google Drive連携<br>画面設計書</h1>
+      <p class="lead">端末内とマイドライブの動画を一つのライブラリとして表示し、再生・整理・端末間転送を共通の操作感で扱うための提案仕様です。Google管理画面を除き、現行アプリのOne UIダークデザインを踏襲します。</p>
+      <div class="badges">
+        <span class="badge"><strong>状態</strong> 設計案</span>
+        <span class="badge"><strong>OAuth</strong> drive</span>
+        <span class="badge"><strong>通信</strong> Android ↔ Google Drive</span>
+        <span class="badge"><strong>対象</strong> マイドライブ・1アカウント</span>
+        <span class="badge"><strong>画面</strong> GD-01〜20</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目次">
+      <b>CONTENTS</b>
+      <a href="#overview">1. 概要</a>
+      <a href="#boundary">2. 権限・データ境界</a>
+      <a href="#inventory">3. 画面一覧</a>
+      <a href="#flow">4. 画面遷移</a>
+      <a href="#design">5. 共通デザイン</a>
+      <a href="#screens">6. 画面仕様</a>
+      <a href="#dialogs">7. ダイアログ</a>
+      <a href="#capabilities">8. 操作能力</a>
+      <a href="#states">9. 状態・例外</a>
+      <a href="#qa">10. QA観点</a>
+    </nav>
+
+    <main>
+      <section id="overview">
+        <div class="section-head">
+          <div><h2>1. 概要</h2><p>実機観測書ではなく、現行アプリへGoogle Drive連携を追加するための実装前画面仕様。</p></div>
+        </div>
+        <div class="grid cols-3">
+          <article class="card">
+            <h3>なぜ</h3>
+            <p>端末に保存された動画だけでなく、ユーザー自身のマイドライブにある動画も、アプリを切り替えず閲覧・再生・整理できるようにする。</p>
+          </article>
+          <article class="card">
+            <h3>何を</h3>
+            <p>動画／フォルダ画面の3点メニューから接続し、Drive印付きの動画・フォルダを既存一覧へ混在表示する。</p>
+          </article>
+          <article class="card">
+            <h3>どうやって</h3>
+            <p>OAuth <code>drive</code>で1アカウントへ接続し、Drive APIと端末メディアを統合ライブラリとして扱う。自前サーバーは使用しない。</p>
+          </article>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>対象</h3>
+            <ul>
+              <li>マイドライブ内の動画・動画を含むフォルダ</li>
+              <li>統合検索・並べ替え・お気に入り・プレイリスト・再生位置</li>
+              <li>端末↔Drive／Drive内／端末内のコピー・移動</li>
+              <li>動画と動画だけを含むフォルダ階層の転送</li>
+              <li>名前変更、Driveリンク共有、ゴミ箱への移動</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>対象外</h3>
+            <ul>
+              <li>共有アイテム、共有ドライブ、複数アカウント</li>
+              <li>Drive動画の外部エディター連携</li>
+              <li>非動画ファイルの転送・変更・削除</li>
+              <li>Driveファイルの完全削除、共有権限の変更</li>
+              <li>自前サーバーでの動画・メタデータ・トークン処理</li>
+            </ul>
+          </article>
+        </div>
+        <div class="callout warn"><strong>設計上の区別：</strong>本書のスマートフォン画面は検討用模式図であり、実機キャプチャではありません。Googleアカウント選択とOAuth同意はGoogle Play servicesが管理するシステム境界として扱い、正確な外観や文言を固定しません。</div>
+      </section>
+
+      <section id="boundary">
+        <div class="section-head">
+          <div><h2>2. 採用権限とデータ境界</h2><p>強い権限を使う理由と、データを扱う場所をユーザー・開発・QAで同じ理解にする。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>項目</th><th>採用仕様</th><th>画面上の説明</th></tr></thead>
+            <tbody>
+              <tr><td>OAuthスコープ</td><td><code>https://www.googleapis.com/auth/drive</code></td><td>動画の表示・再生・名前変更・コピー・移動・ゴミ箱移動に使用する。</td></tr>
+              <tr><td>接続数</td><td>同時に1 Googleアカウント</td><td>別アカウントへ切り替えるときは現在の接続を解除する。</td></tr>
+              <tr><td>Drive範囲</td><td>マイドライブのみ</td><td>共有アイテムと共有ドライブは表示しない。</td></tr>
+              <tr><td>通信経路</td><td>Androidアプリ ↔ Google Drive API</td><td>動画・メタデータを自前サーバーへ送信しない。</td></tr>
+              <tr><td>端末保存</td><td>トークン、Driveメタデータ、サムネイル、アプリ内履歴</td><td>接続解除時にDrive由来のキャッシュを削除する。</td></tr>
+              <tr><td>非動画</td><td>一覧・転送・変更の対象外</td><td>フォルダ転送でも動画だけを処理し、文書や画像は残す。</td></tr>
+              <tr><td>削除</td><td>Driveはゴミ箱へ移動、端末は既存削除フロー</td><td>Driveの完全削除は提供しない。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="boundary">
+          <div class="boundary-box">
+            <h3>Android端末</h3>
+            <ul>
+              <li>Google Authorization</li>
+              <li>統合動画インデックス</li>
+              <li>サムネイル／メタデータキャッシュ</li>
+              <li>Media3ストリーミング再生</li>
+              <li>コピー／移動の転送・検証</li>
+            </ul>
+          </div>
+          <div class="boundary-arrow">⇄</div>
+          <div class="boundary-box">
+            <h3>Google Drive</h3>
+            <ul>
+              <li>マイドライブの動画・フォルダ</li>
+              <li>ファイルごとの操作能力</li>
+              <li>動画本体・サムネイル・リンク</li>
+              <li>名前・親フォルダ・ゴミ箱状態</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout"><strong>接続説明の必須文言：</strong>「Google Drive内の動画を表示・再生・整理するため、Driveの管理権限を使用します。アプリは動画に関する操作にのみ権限を使用し、データを自前サーバーへ送信しません。」</div>
+      </section>
+
+      <section id="inventory">
+        <div class="section-head">
+          <div><h2>3. 画面一覧</h2><p>アプリ管理画面、Google管理画面、統合ライブラリ、ファイル操作、例外状態を別IDで管理する。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>領域</th><th>画面ID</th><th>内容</th><th>管理主体</th><th>状態</th></tr></thead>
+            <tbody>
+              <tr><td>接続入口</td><td>GD-01〜03</td><td>動画／フォルダの3点メニュー、接続説明</td><td>アプリ</td><td><span class="status planned">設計案</span></td></tr>
+              <tr><td>Google認証</td><td>GD-04〜05</td><td>アカウント選択、OAuth同意</td><td>Google</td><td><span class="status system">システム境界</span></td></tr>
+              <tr><td>接続管理</td><td>GD-06〜08</td><td>初回同期、接続設定、解除確認</td><td>アプリ</td><td><span class="status planned">設計案</span></td></tr>
+              <tr><td>統合表示</td><td>GD-09〜12</td><td>動画、フォルダ、Driveフォルダ内、Drive動画詳細</td><td>アプリ</td><td><span class="status planned">設計案</span></td></tr>
+              <tr><td>ファイル操作</td><td>GD-13〜19</td><td>名前変更、コピー、移動、転送、競合、ゴミ箱、リンク共有</td><td>アプリ＋Android共有先</td><td><span class="status planned">設計案</span></td></tr>
+              <tr><td>例外</td><td>GD-20</td><td>通信・権限・同期・ファイル状態</td><td>アプリ</td><td><span class="status planned">設計案</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="flow">
+        <div class="section-head">
+          <div><h2>4. 画面遷移</h2><p>青はアプリ内、黄はGoogle／Android管理境界、緑は接続完了後の統合表示を示す。</p></div>
+        </div>
+        <div class="flow-scroll">
+          <svg viewBox="0 0 1200 720" role="img" aria-label="Google Drive連携画面遷移図">
+            <defs>
+              <marker id="arrB" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6Z" fill="#73a9ff"/></marker>
+              <marker id="arrY" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6Z" fill="#f8c66d"/></marker>
+              <marker id="arrG" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6Z" fill="#58d68d"/></marker>
+              <style>
+                .n{fill:#171e29;stroke:#354458;stroke-width:2;rx:16}.ng{fill:#18271f;stroke:#3d7654}.ny{fill:#2a2418;stroke:#806936}.t{font:700 18px -apple-system,BlinkMacSystemFont,sans-serif;fill:#f2f6fc}.s{font:13px -apple-system,BlinkMacSystemFont,sans-serif;fill:#a7b3c3}.b{stroke:#73a9ff;stroke-width:3;fill:none;marker-end:url(#arrB)}.y{stroke:#f8c66d;stroke-width:3;fill:none;marker-end:url(#arrY)}.g{stroke:#58d68d;stroke-width:3;fill:none;marker-end:url(#arrG)}.d{stroke-dasharray:8 7}
+              </style>
+            </defs>
+            <rect class="n" x="40" y="70" width="220" height="82"/><text class="t" x="62" y="105">GD-01/02</text><text class="s" x="62" y="130">動画／フォルダメニュー</text>
+            <rect class="n" x="310" y="70" width="220" height="82"/><text class="t" x="332" y="105">GD-03 接続説明</text><text class="s" x="332" y="130">権限用途・通信境界</text>
+            <rect class="ny" x="580" y="70" width="220" height="82"/><text class="t" x="602" y="105">GD-04/05</text><text class="s" x="602" y="130">Googleアカウント・同意</text>
+            <rect class="n" x="850" y="70" width="220" height="82"/><text class="t" x="872" y="105">GD-06 初回同期</text><text class="s" x="872" y="130">ローカル表示を維持</text>
+
+            <rect class="ng" x="120" y="255" width="240" height="82"/><text class="t" x="142" y="290">GD-09 統合動画</text><text class="s" x="142" y="315">端末＋Drive</text>
+            <rect class="ng" x="430" y="255" width="240" height="82"/><text class="t" x="452" y="290">GD-10/11 フォルダ</text><text class="s" x="452" y="315">統合一覧・Drive階層</text>
+            <rect class="n" x="740" y="255" width="240" height="82"/><text class="t" x="762" y="290">GD-12 動画詳細</text><text class="s" x="762" y="315">能力別アクション</text>
+
+            <rect class="n" x="120" y="445" width="240" height="82"/><text class="t" x="142" y="480">GD-13〜15</text><text class="s" x="142" y="505">名前変更・保存先選択</text>
+            <rect class="n" x="430" y="445" width="240" height="82"/><text class="t" x="452" y="480">GD-16/17</text><text class="s" x="452" y="505">転送・競合解決</text>
+            <rect class="n" x="740" y="445" width="240" height="82"/><text class="t" x="762" y="480">GD-18/19</text><text class="s" x="762" y="505">ゴミ箱・リンク共有</text>
+
+            <rect class="n" x="120" y="610" width="240" height="70"/><text class="t" x="142" y="642">GD-07/08 接続管理</text><text class="s" x="142" y="663">同期・解除</text>
+            <rect class="n" x="740" y="610" width="240" height="70"/><text class="t" x="762" y="642">GD-20 状態・例外</text><text class="s" x="762" y="663">再試行・再認証</text>
+
+            <path class="b" d="M260 111H310"/><path class="y" d="M530 111H580"/><path class="y" d="M800 111H850"/>
+            <path class="g" d="M960 152C960 205 350 205 240 255"/><path class="g" d="M960 152C960 215 660 215 550 255"/>
+            <path class="b" d="M360 296H430"/><path class="b" d="M670 296H740"/>
+            <path class="b" d="M860 337C860 395 650 395 550 445"/><path class="b" d="M860 337V445"/><path class="b" d="M740 296C610 296 470 390 360 445"/>
+            <path class="b" d="M240 337V445"/><path class="b" d="M240 152V610"/>
+            <path class="b d" d="M240 610C400 560 660 610 740 645"/><path class="b d" d="M670 486C735 530 785 560 820 610"/>
+          </svg>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--accent)"></i> アプリ内</span>
+          <span><i class="dot" style="background:var(--amber)"></i> Google／Android管理</span>
+          <span><i class="dot" style="background:var(--green)"></i> 接続完了・統合表示</span>
+        </div>
+        <details>
+          <summary>戻る・キャンセルの原則</summary>
+          <div>GD-04のアカウント選択、GD-05の同意をキャンセルした場合は接続を作成せずGD-03へ戻る。GD-03から戻ると呼び出し元の動画またはフォルダ画面へ戻る。同期中もローカル一覧は操作でき、接続設定へ移動しても同期は継続する。</div>
+        </details>
+      </section>
+
+      <section id="design">
+        <div class="section-head">
+          <div><h2>5. 共通デザイン</h2><p>現行の動画ライブラリアプリと同じOne UIダーク表現を使用し、Drive由来であることだけを小さく補助する。</p></div>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>表示原則</h3>
+            <ul>
+              <li>動画・フォルダのカード寸法、文字階層、検索、並べ替え、選択操作は端末項目と共通。</li>
+              <li>Drive項目にはサムネイルまたは名称付近へ小さな「Drive」バッジを表示。</li>
+              <li>同名フォルダでも保存元を識別できるよう、補助情報へ「Google Drive」または「端末」を表示。</li>
+              <li>接続・同期状態を一覧上部の非モーダルバナーで通知し、ローカル操作を妨げない。</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>操作原則</h3>
+            <ul>
+              <li>能力不足の操作は消さずに無効表示し、理由を補助文またはタップ時説明で示す。</li>
+              <li>Driveの「削除」は「ゴミ箱に移動」と表記し、完全削除と誤認させない。</li>
+              <li>転送は進捗、処理対象、保存元、保存先、キャンセル可否を常に表示。</li>
+              <li>Google管理画面はOSテーマ・アカウント状態により変わるため、アプリ側で外観を再現しない。</li>
+            </ul>
+          </article>
+        </div>
+        <div class="tokens">
+          <div class="swatch" style="background:#090c12"><strong>#090C12</strong><span class="muted">背景</span></div>
+          <div class="swatch" style="background:#171e29"><strong>#171E29</strong><span class="muted">カード</span></div>
+          <div class="swatch" style="background:#73a9ff;color:#07101d"><strong>#73A9FF</strong><span>選択・CTA</span></div>
+          <div class="swatch" style="background:#58d68d;color:#07120c"><strong>#58D68D</strong><span>完了・接続</span></div>
+          <div class="swatch" style="background:#ff7878;color:#200"><strong>#FF7878</strong><span>警告・破壊</span></div>
+        </div>
+      </section>
+
+      <section id="screens">
+        <div class="section-head">
+          <div><h2>6. 各画面仕様</h2><p>20画面すべてを「設計案」として表示する。模式図内の名称・件数・アカウントは架空データ。</p></div>
+        </div>
+        <div id="screenCards" class="screens"></div>
+        <noscript><div class="callout danger">画面カードを表示するにはJavaScriptが必要です。画面一覧と操作能力表はJavaScriptなしでも確認できます。</div></noscript>
+      </section>
+
+      <section id="dialogs">
+        <div class="section-head">
+          <div><h2>7. ダイアログ／システム境界一覧</h2><p>確定条件と取り消し時の状態を、破壊・転送・権限操作ごとに定義する。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>形式</th><th>主要内容</th><th>確定</th><th>キャンセル／戻る</th></tr></thead>
+            <tbody>
+              <tr><td>GD-03</td><td>アプリ画面</td><td>権限用途、対象、データ境界、アカウント選択CTA</td><td>Googleアカウントを選択</td><td>呼び出し元へ戻る</td></tr>
+              <tr><td>GD-04</td><td>Google管理画面</td><td>端末上のGoogleアカウント選択</td><td>アカウント選択</td><td>GD-03へ戻る、接続なし</td></tr>
+              <tr><td>GD-05</td><td>Google管理画面</td><td><code>drive</code>権限への同意</td><td>許可</td><td>GD-03へ戻る、接続なし</td></tr>
+              <tr><td>GD-08</td><td>確認ダイアログ</td><td>接続情報・キャッシュを削除、転送済み動画は保持</td><td>接続を解除</td><td>GD-07へ戻る</td></tr>
+              <tr><td>GD-13</td><td>入力ダイアログ</td><td>動画／フォルダ名、拡張子固定</td><td>名前変更</td><td>変更なし</td></tr>
+              <tr><td>GD-14/15</td><td>全画面Picker</td><td>端末／Drive切替、階層、コピー／移動先</td><td>CTA押下</td><td>元画面へ戻る</td></tr>
+              <tr><td>GD-17</td><td>競合ダイアログ</td><td>スキップ／名前を変更／置き換え</td><td>選択した解決方法</td><td>当該項目を未処理で戻る</td></tr>
+              <tr><td>GD-18</td><td>確認ダイアログ</td><td>動画だけをゴミ箱へ、非動画は残す</td><td>ゴミ箱に移動</td><td>変更なし</td></tr>
+              <tr><td>GD-19</td><td>説明＋Android Chooser</td><td>Driveリンク、共有権限は変更しない</td><td>共有先を選択</td><td>元画面へ戻る</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="capabilities">
+        <div class="section-head">
+          <div><h2>8. 操作能力と転送仕様</h2><p>表示元ではなく、対象ファイルの能力と保存元／保存先の組み合わせで操作を決める。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>操作</th><th>端末</th><th>Google Drive</th><th>条件・差分</th></tr></thead>
+            <tbody>
+              <tr><td>再生・シーク・速度・回転</td><td><span class="status allowed">可</span></td><td><span class="status conditional">能力・通信依存</span></td><td>Driveは<code>canDownload</code>を確認して認証付きストリーミング。オフラインまたはダウンロード制限時は再生不可。</td></tr>
+              <tr><td>検索・並べ替え</td><td><span class="status allowed">可</span></td><td><span class="status allowed">可</span></td><td>統合インデックスに対して一括適用。</td></tr>
+              <tr><td>お気に入り・プレイリスト・再生位置</td><td><span class="status allowed">可</span></td><td><span class="status allowed">可</span></td><td>Drive項目の状態も端末内アプリデータに保存。</td></tr>
+              <tr><td>名前変更</td><td><span class="status allowed">可</span></td><td><span class="status conditional">能力依存</span></td><td><code>canRename</code>。拡張子は変更対象外。</td></tr>
+              <tr><td>コピー</td><td><span class="status allowed">可</span></td><td><span class="status conditional">能力依存</span></td><td>Driveは<code>canCopy</code>。端末↔Driveはアップロード／ダウンロード。</td></tr>
+              <tr><td>移動</td><td><span class="status allowed">可</span></td><td><span class="status conditional">能力依存</span></td><td><code>canMoveItemWithinDrive</code>。跨ぎ移動は転送検証後に原本を削除。</td></tr>
+              <tr><td>削除</td><td><span class="status allowed">既存削除</span></td><td><span class="status conditional">ゴミ箱</span></td><td><code>canTrash</code>。Driveの完全削除は提供しない。</td></tr>
+              <tr><td>共有</td><td><span class="status allowed">動画本体</span></td><td><span class="status allowed">Driveリンク</span></td><td>Drive共有ではアクセス権を変更しない。</td></tr>
+              <tr><td>外部エディター</td><td><span class="status allowed">既存仕様</span></td><td><span class="status blocked">非対応</span></td><td>Drive動画では無効表示し、端末へコピー後に利用するよう案内。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 style="margin-top:26px">保存元／保存先マトリクス</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>保存元</th><th>保存先</th><th>コピー</th><th>移動</th><th>失敗時</th></tr></thead>
+            <tbody>
+              <tr><td>端末</td><td>端末</td><td>既存ファイルコピー</td><td>既存ファイル移動</td><td>既存仕様の競合・Android確認</td></tr>
+              <tr><td>端末</td><td>Drive</td><td>選択フォルダへアップロード</td><td>アップロード・検証後に端末原本を削除</td><td>削除失敗ならDriveコピーを残して部分成功</td></tr>
+              <tr><td>Drive</td><td>端末</td><td>選択フォルダへダウンロード</td><td>ダウンロード・検証後にDrive動画をゴミ箱へ</td><td>ゴミ箱移動失敗なら端末コピーを残して部分成功</td></tr>
+              <tr><td>Drive</td><td>Drive</td><td>Drive APIで複製</td><td>親フォルダを更新</td><td>原本を維持してエラー表示</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn"><strong>フォルダ転送：</strong>サブフォルダ構造を保ちながら動画だけを再帰処理する。非動画ファイルには触れない。Drive→端末の移動後、元フォルダに非動画または未処理項目が残る場合はフォルダを残し、完全に空になった場合だけゴミ箱へ移動する。</div>
+      </section>
+
+      <section id="states">
+        <div class="section-head">
+          <div><h2>9. 状態差分・例外</h2><p>ローカル一覧を利用可能なまま保ち、Drive固有の問題だけを局所的に通知する。</p></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>状態</th><th>表示</th><th>操作</th><th>復帰</th></tr></thead>
+            <tbody>
+              <tr><td>未接続</td><td>3点メニューに「Google Driveと接続」</td><td>接続説明へ</td><td>—</td></tr>
+              <tr><td>初回同期</td><td>一覧上部バナー「Google Driveを同期しています…」</td><td>ローカル動画は通常操作可能</td><td>取得したDrive項目から順次追加</td></tr>
+              <tr><td>Drive動画0件</td><td>「Google Driveに動画がありません」</td><td>手動同期／接続設定</td><td>動画追加後の同期</td></tr>
+              <tr><td>オフライン</td><td>Drive項目にオフライン表示、ローカル項目は維持</td><td>Drive再生・更新・転送を無効化</td><td>接続回復後に再試行</td></tr>
+              <tr><td>モバイル通信</td><td>初回再生・転送前にデータ通信確認</td><td>今回のみ／常に許可／キャンセル</td><td>設定から変更可能</td></tr>
+              <tr><td>トークン更新中</td><td>短時間の非モーダル進捗</td><td>ローカル操作可</td><td>成功時は自動再試行</td></tr>
+              <tr><td>権限失効</td><td>「Google Driveへ再接続してください」</td><td>再接続／解除</td><td>Google同意後に同期</td></tr>
+              <tr><td>ファイル消失</td><td>「Drive上で動画が移動または削除されました」</td><td>一覧から削除／同期</td><td>再同期</td></tr>
+              <tr><td>操作能力なし</td><td>該当メニューを無効化＋理由</td><td>許可された操作のみ</td><td>Drive側権限変更後に同期</td></tr>
+              <tr><td>部分成功</td><td>成功件数・失敗件数・原本状態</td><td>詳細表示／失敗分再試行</td><td>再試行または完了</td></tr>
+              <tr><td>同期失敗</td><td>上部バナー「同期できませんでした」</td><td>再試行／接続設定</td><td>成功時にバナー消去</td></tr>
+              <tr><td>転送中の解除</td><td>接続解除CTAを無効化</td><td>転送画面へ移動</td><td>完了またはキャンセル後に解除</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="qa">
+        <div class="section-head">
+          <div><h2>10. QA観点と受入条件</h2><p>認証、統合表示、転送の安全性、能力不足、レスポンシブ表示を重点確認する。</p></div>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <h3>重点シナリオ</h3>
+            <ol>
+              <li>動画・フォルダ両方の3点メニューから接続説明へ到達する。</li>
+              <li>アカウント選択または同意をキャンセルしても接続状態を作らない。</li>
+              <li>接続完了後、端末とDriveの動画・フォルダをDrive印付きで統合表示する。</li>
+              <li>検索、並べ替え、再生、お気に入り、プレイリスト、再生位置が保存元に依存しない。</li>
+              <li>能力不足の操作が無効表示され、実行リクエストを送らない。</li>
+              <li>4通りの保存元／保存先でコピー・移動・競合・途中失敗を確認する。</li>
+              <li>非動画混在フォルダで非動画を変更せず、空でない元フォルダを残す。</li>
+              <li>Drive共有がリンクのみで、共有権限を変更しない。</li>
+              <li>接続解除でDriveキャッシュと一覧項目を消し、端末転送済み動画を残す。</li>
+            </ol>
+          </article>
+          <article class="card">
+            <h3>受入チェック</h3>
+            <ul>
+              <li>GD-01〜20のIDが一意で、全カードに目的・到達・戻り・表示・操作・状態差分がある。</li>
+              <li>全操作がダイアログ一覧または操作能力表のいずれかに対応する。</li>
+              <li>OAuth画面をアプリ管理画面として表現していない。</li>
+              <li><code>drive</code>、マイドライブ、1アカウント、クライアントサイドの前提が全節で一致する。</li>
+              <li>実アカウント、ファイル名、トークン、個人情報を含まない。</li>
+              <li>デスクトップ幅と390px幅で表・遷移図・20画面が欠けずに閲覧できる。</li>
+            </ul>
+          </article>
+        </div>
+        <details>
+          <summary>実装時に参照するGoogle公式仕様</summary>
+          <div>
+            <ul>
+              <li><a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth">Drive APIのOAuthスコープ</a></li>
+              <li><a href="https://developers.google.com/workspace/drive/api/reference/rest/v3/files">Filesリソースとcapabilities</a></li>
+              <li><a href="https://developers.google.com/workspace/drive/api/guides/delete">ゴミ箱・削除仕様</a></li>
+              <li><a href="https://developers.google.com/workspace/drive/api/guides/manage-downloads">動画ファイルの取得仕様</a></li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <div class="footer">
+        <p>文書状態：提案仕様／対象アプリ：動画ライブラリアプリ（Android）／作成日：2026-08-30（Asia/Tokyo）</p>
+        <p>このHTMLは自己完結型です。既存アプリコード、OAuth設定、既存画面設計書には変更を加えていません。</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const screens = [
+      {id:"GD-01",title:"動画：その他メニュー",kind:"menuVideo",purpose:"動画画面からGoogle Drive接続または接続管理へ入る。",reach:"動画タブ → 右上の3点リーダー",back:"画面外タップ／Android戻るで動画一覧",items:"未接続時「Google Driveと接続」。接続後「Google Driveの設定」。既存メニュー項目。",ops:"未接続時はGD-03、接続後はGD-07へ遷移する。",state:"同期中は項目末尾へ進捗表示。オフラインでも接続設定には到達可能。"},
+      {id:"GD-02",title:"フォルダ：その他メニュー",kind:"menuFolder",purpose:"フォルダ画面からも同じGoogle Drive接続・管理導線を提供する。",reach:"フォルダタブ → 右上の3点リーダー",back:"画面外タップ／Android戻るでフォルダ一覧",items:"未接続時「Google Driveと接続」。接続後「Google Driveの設定」。既存メニュー項目。",ops:"GD-01と同じ接続状態を参照し、GD-03またはGD-07へ遷移する。",state:"動画画面とフォルダ画面で接続状態・文言を同期する。"},
+      {id:"GD-03",title:"Google Drive接続説明",kind:"connect",purpose:"強いDrive管理権限の利用目的とデータ境界を同意前に説明する。",reach:"GD-01／GD-02 → Google Driveと接続",back:"呼び出し元の動画／フォルダ画面",items:"対象機能、drive権限、動画だけを扱う方針、自前サーバー不使用、アカウント選択CTA、キャンセル。",ops:"「Googleアカウントを選択」でGD-04。キャンセルは接続を作成せず戻る。",state:"既に接続済みの場合は表示せずGD-07へ送る。"},
+      {id:"GD-04",title:"Googleアカウント選択",kind:"systemAccount",purpose:"端末上のGoogleアカウントから接続対象を1件選ぶ。",reach:"GD-03 → Googleアカウントを選択",back:"キャンセルでGD-03",items:"Google Play servicesが提供するアカウント候補、アカウント追加。",ops:"選択するとGD-05。キャンセル時はトークン・接続情報を保存しない。",state:"外観・候補・文言はGoogle管理。アプリは模式図どおりの表示を保証しない。"},
+      {id:"GD-05",title:"Google Drive権限への同意",kind:"systemConsent",purpose:"OAuth driveスコープへのユーザー同意を取得する。",reach:"GD-04 → アカウント選択",back:"拒否／キャンセルでGD-03",items:"アプリ名、Googleアカウント、要求権限、許可／キャンセル。",ops:"許可でGD-06。拒否時は接続を作成せず説明画面へ戻る。",state:"Google管理画面。正確な権限文言は公開時のOAuth設定とGoogle側表示に従う。"},
+      {id:"GD-06",title:"初回同期",kind:"sync",purpose:"接続直後にマイドライブの動画とフォルダを取得し、統合一覧へ追加する。",reach:"GD-05 → 権限許可",back:"呼び出し元一覧へ戻っても同期継続",items:"同期中バナー、取得済み件数、進捗、接続アカウント。",ops:"ローカル一覧は通常操作可能。取得したDrive項目から順次GD-09／GD-10へ追加する。",state:"失敗時はGD-20の同期失敗。動画0件なら空状態を表示。"},
+      {id:"GD-07",title:"Google Drive接続設定",kind:"account",purpose:"接続アカウントと同期・通信・解除を管理する。",reach:"GD-01／GD-02 → Google Driveの設定",back:"呼び出し元の動画／フォルダ画面",items:"架空アカウント表示、接続状態、最終同期、今すぐ同期、モバイルデータ設定、接続解除。",ops:"手動同期でGD-06相当の非モーダル同期。接続解除でGD-08。",state:"転送中は接続解除を無効化し、進行中のGD-16へ案内する。"},
+      {id:"GD-08",title:"Google Drive接続解除",kind:"disconnect",purpose:"接続解除で消える情報と残る端末動画を確認する。",reach:"GD-07 → 接続解除",back:"キャンセルでGD-07",items:"トークン・メタデータ・サムネイル・Drive一覧項目を削除、端末転送済み動画は保持、キャンセル、接続解除。",ops:"確定後にGoogle認可を解除し、Driveキャッシュを削除して動画／フォルダ一覧へ戻る。",state:"転送中は到達不可。解除失敗時は接続を維持しGD-20のエラーを表示。"},
+      {id:"GD-09",title:"統合動画ライブラリ",kind:"videoList",purpose:"端末動画とDrive動画を同じ一覧で検索・並べ替え・再生する。",reach:"Drive接続完了後の動画タブ",back:"ホーム／別タブ",items:"既存動画タイル／行、Driveバッジ、保存元補助情報、検索、並べ替え、選択、同期バナー。",ops:"タップで既存プレイヤー、長押しで選択、詳細でGD-12。検索・並べ替えは両保存元へ適用。",state:"オフライン時もDrive項目は残すが再生・更新を無効化。同期中は取得分から順次表示。"},
+      {id:"GD-10",title:"統合フォルダ一覧",kind:"folderList",purpose:"端末フォルダとマイドライブの動画フォルダを一つの画面で閲覧する。",reach:"Drive接続完了後のフォルダタブ",back:"ホーム／別タブ",items:"既存フォルダカード／行、Driveバッジ、動画件数、合計サイズ、保存元、検索、並べ替え。",ops:"端末フォルダは既存画面、DriveフォルダはGD-11へ。長押しで能力に応じたフォルダ操作。",state:"同名フォルダは保存元表示で区別。非動画しかないDriveフォルダは表示しない。"},
+      {id:"GD-11",title:"Google Driveフォルダ内",kind:"folderDetail",purpose:"Driveの階層を保ったまま、選択フォルダ内の動画と子フォルダを表示する。",reach:"GD-10 → Driveフォルダ",back:"親Driveフォルダ／GD-10",items:"パンくず、子フォルダ、動画、Driveバッジ、検索、並べ替え、3点メニュー。",ops:"動画タップで再生、詳細でGD-12。フォルダ作成・名前変更・Drive内移動・動画だけの転送を提供。",state:"非動画は表示しない。フォルダ操作時は非動画を巻き込まない方針を明示する。"},
+      {id:"GD-12",title:"Google Drive動画詳細",kind:"detail",purpose:"Drive動画の情報と、実行可能な操作を既存詳細画面に合わせて表示する。",reach:"GD-09／GD-11 → Drive動画の詳細",back:"呼び出し元一覧／フォルダ",items:"サムネイル、名前、Drive保存場所、更新日時、サイズ、映像情報、再生、共有、名前変更、コピー、移動、ゴミ箱。",ops:"能力値で操作を有効化。外部エディターは無効表示し「端末へコピー後に利用できます」と説明。",state:"canDownload／canRename／canCopy／canMoveItemWithinDrive／canTrashがfalseの項目は無効表示し、理由を示す。"},
+      {id:"GD-13",title:"Drive動画／フォルダの名前変更",kind:"rename",purpose:"Drive動画またはフォルダの名称を安全に変更する。",reach:"GD-12またはGD-11の操作メニュー → 名前変更",back:"キャンセルで元画面",items:"現在名、編集欄、固定拡張子、キャンセル、名前変更。",ops:"空文字・禁止文字・変更なしを無効化。確定後にDrive更新し、一覧とパンくずへ反映。",state:"canRename=falseなら入口を無効化。失敗時は入力を保持して再試行可能。"},
+      {id:"GD-14",title:"統合コピー先選択",kind:"copyPicker",purpose:"端末またはDriveを保存先として動画・フォルダをコピーする。",reach:"動画／フォルダ操作 → コピー",back:"元画面、コピー未実行",items:"端末／Google Driveセグメント、アカウント、パンくず、フォルダ一覧、新規フォルダ、コピーCTA。",ops:"保存先選択後GD-16。端末↔Driveはダウンロード／アップロード、同一保存元は既存／Drive内コピー。",state:"オフライン時はDrive側を無効化。非動画は処理対象件数に含めない。"},
+      {id:"GD-15",title:"統合移動先選択",kind:"movePicker",purpose:"端末またはDriveを保存先として、検証後削除方式で動画・フォルダを移動する。",reach:"動画／フォルダ操作 → 移動",back:"元画面、移動未実行",items:"端末／Google Driveセグメント、保存先階層、移動対象件数、原本削除説明、移動CTA。",ops:"保存先へ転送・検証後に原本を削除してGD-16へ。Drive削除はゴミ箱、端末削除は既存確認を使用。",state:"同一Driveでは親フォルダ更新。部分成功時はコピー済みを保持して原本状態を通知。"},
+      {id:"GD-16",title:"転送進捗／結果",kind:"transfer",purpose:"長時間のアップロード・ダウンロード・再帰転送を可視化する。",reach:"GD-14／GD-15 → コピー／移動を確定",back:"キャンセル可能期間は元画面、完了後は保存先",items:"操作名、保存元→保存先、現在項目、件数、転送量、進捗、キャンセル、バックグラウンド通知。",ops:"転送・検証中はキャンセル可能。移動の原本削除開始後はキャンセル不可。完了・部分成功・失敗を表示。",state:"モバイル通信初回はGD-20確認。転送中は接続解除を無効化する。"},
+      {id:"GD-17",title:"同名競合の解決",kind:"conflict",purpose:"保存先の同名動画・フォルダに対する処理を既存操作感で選ぶ。",reach:"GD-14／GD-15の転送前検査で同名を検出",back:"キャンセルで当該項目を未処理",items:"対象名、保存元／保存先情報、スキップ、名前を変更、置き換え、以降にも適用。",ops:"選択後GD-16へ。置き換えは新データの検証成功後に既存対象を削除／ゴミ箱移動する。",state:"Driveは同名を許容するが、アプリ内では既存ローカル仕様と同じ競合確認を行う。"},
+      {id:"GD-18",title:"Google Driveのゴミ箱確認",kind:"trash",purpose:"Drive動画または動画だけを含むフォルダ操作を復元可能なゴミ箱移動として確認する。",reach:"GD-12／GD-11／複数選択 → ゴミ箱に移動",back:"キャンセルで元画面",items:"対象名・件数、非動画を残す説明、キャンセル、ゴミ箱に移動。",ops:"動画をゴミ箱へ移動。フォルダは全内容が空になった場合のみゴミ箱へ移動。",state:"canTrash=falseなら入口を無効化。部分失敗は成功／失敗件数をGD-16形式で表示。"},
+      {id:"GD-19",title:"Google Driveリンク共有",kind:"share",purpose:"Drive動画本体ではなく閲覧リンクをAndroid共有先へ渡す。",reach:"GD-12／選択操作 → 共有",back:"Android戻るで元画面",items:"共有対象、Driveリンク、アクセス権を変更しない注意、続行、キャンセル、Android共有先。",ops:"続行でDriveのwebViewLinkをAndroid Chooserへ渡す。アプリはリンク公開範囲を変更しない。",state:"受信者にアクセス権がない場合は開けない。リンク取得不可時は共有を無効化。"},
+      {id:"GD-20",title:"通信・権限・同期の例外状態",kind:"states",purpose:"Drive固有の問題を局所表示し、ローカルライブラリを利用可能なまま保つ。",reach:"Drive通信・認証・同期・操作エラー発生時",back:"エラー表示を閉じて現在画面を維持",items:"オフライン、モバイル通信、権限失効、再認証、同期失敗、ファイル消失、能力不足、部分成功。",ops:"再試行、再接続、接続解除、一覧から削除、詳細表示を状態に応じて提示。",state:"トークン更新は自動。ユーザー操作が必要な場合だけ再接続CTAを表示する。"}
+    ];
+
+    function statusBar() {
+      return '<div class="statusbar"><span>12:34</span><span>5G　87%</span></div>';
+    }
+    function appBar(title, back) {
+      return '<div class="appbar '+(back ? '' : 'large')+'"><span class="icon-btn">'+(back ? '‹' : '')+'</span><span class="'+(back ? 'small-title' : 'title')+'">'+title+'</span><span class="icon-btn">⋮</span></div>';
+    }
+    function bottomNav(active) {
+      const items = [["video","▣","動画"],["folder","■","フォルダ"],["list","≡","リスト"],["settings","⚙","設定"]];
+      return '<div class="bottomnav">'+items.map(function(i){return '<div class="nav-item '+(i[0]===active?'on':'')+'"><b>'+i[1]+'</b><span>'+i[2]+'</span></div>';}).join('')+'</div>';
+    }
+    function driveBadge() {
+      return '<span class="drive-badge"><i class="drive-dot"></i>Drive</span>';
+    }
+    function videoRow(name, drive) {
+      return '<div class="list-row"><div class="thumb"></div><div class="meta"><div class="name">'+name+' '+(drive?driveBadge():'')+'</div><div class="sub">'+(drive?'Google Drive · 18.4 MB':'端末 · Camera · 18.4 MB')+'</div></div><span>⋮</span></div>';
+    }
+    function folderCard(name, drive, count) {
+      return '<div class="folder-card"><div class="folder-icon"></div><div class="name">'+name+' '+(drive?driveBadge():'')+'</div><div class="sub">'+count+'件 · '+(drive?'Google Drive':'端末')+'</div></div>';
+    }
+    function baseList(title, active, folder) {
+      const content = folder
+        ? '<div class="folder-grid">'+folderCard('Camera',false,24)+folderCard('旅行',true,12)+folderCard('Movies',false,8)+folderCard('講座',true,6)+'</div>'
+        : videoRow('VID_0001.mp4',false)+videoRow('旅行_海辺.mp4',true)+videoRow('MOV_0142.mp4',false)+videoRow('講座_第3回.mp4',true);
+      return statusBar()+appBar(title,false)+'<div class="search">⌕　'+(folder?'フォルダや動画を検索':'動画やフォルダを検索')+'</div><div class="toolbar"><span>更新日時順 ▾</span><span>▦　☑</span></div><div class="content">'+content+'</div>'+bottomNav(active);
+    }
+    function menuMock(folder) {
+      return baseList(folder?'フォルダ':'動画ライブラリ',folder?'folder':'video',folder)+
+        '<div class="sheet"><div class="sheet-title">その他</div><div class="menu-row"><span>編集</span><span>›</span></div><div class="menu-row"><span>並べ替え</span><span>›</span></div><div class="menu-row"><span>Google Driveと接続</span><span>'+driveBadge()+'</span></div><div class="menu-row"><span>ビデオについて</span><span>›</span></div></div>';
+    }
+    function connectMock() {
+      return statusBar()+appBar('Google Driveと接続',true)+'<div class="content"><div class="drive-hero">Drive</div><div class="center"><h3>Driveの動画をライブラリへ</h3><p class="panel-text">表示・再生・名前変更・コピー・移動・ゴミ箱移動に管理権限を使用します。</p></div><div class="panel" style="margin-top:16px"><div class="panel-title">データの取り扱い</div><div class="panel-text">動画に関する操作にのみ使用し、自前サーバーへ送信しません。非動画ファイルは処理しません。</div></div><div class="button-stack"><div class="primary">Googleアカウントを選択</div><div class="secondary">キャンセル</div></div></div>';
+    }
+    function systemMock(consent) {
+      return statusBar()+'<div class="appbar"><span class="icon-btn">×</span><span class="small-title">Google</span><span></span></div><div class="system-box"><div class="mark">G</div><h3>'+(consent?'アクセスを許可':'アカウントを選択')+'</h3><p class="panel-text">'+(consent?'Google Driveのデータへのアクセスについて、Googleが管理する同意画面を表示します。':'端末上のGoogleアカウント候補をGoogleが表示します。')+'</p><div class="panel" style="margin-top:16px;text-align:left"><div class="info-row"><span>'+(consent?'要求スコープ':'アカウント候補')+'</span><span>'+(consent?'drive':'架空アカウント')+'</span></div><div class="info-row"><span>管理主体</span><span>Google Play services</span></div></div></div><div class="content"><div class="callout warn" style="font-size:.64rem;margin-top:0">模式図です。実際の外観・文言・候補はGoogle側の状態により変わります。</div></div>';
+    }
+    function syncMock() {
+      return baseList('動画ライブラリ','video',false).replace('<div class="content">','<div class="content"><div class="panel" style="margin-bottom:8px"><div class="panel-title">Google Driveを同期しています…</div><div class="panel-text">動画 18件、フォルダ 5件を取得</div><div class="progress"><i></i></div></div>');
+    }
+    function accountMock() {
+      return statusBar()+appBar('Google Driveの設定',true)+'<div class="content"><div class="panel"><div class="panel-title">接続中</div><div class="panel-text">drive.user@example.com（架空）</div><div class="info-row"><span>対象</span><span>マイドライブ</span></div><div class="info-row"><span>最終同期</span><span>今日 12:30</span></div></div><div class="panel"><div class="info-row"><span>今すぐ同期</span><span>›</span></div><div class="info-row"><span>モバイルデータ</span><span>確認する</span></div><div class="info-row"><span>接続解除</span><span style="color:#ff9696">›</span></div></div><div class="panel"><div class="panel-text">転送中は接続を解除できません。端末へ転送済みの動画は解除後も残ります。</div></div></div>';
+    }
+    function disconnectMock() {
+      return accountMock()+'<div class="dialog-backdrop"><div class="dialog"><h4>Google Driveの接続を解除</h4><p>トークン、Driveメタデータ、サムネイル、一覧項目をこの端末から削除します。端末へ転送済みの動画は残ります。</p><div class="actions"><span>キャンセル</span><span class="danger-action">接続を解除</span></div></div></div>';
+    }
+    function folderDetailMock() {
+      return statusBar()+appBar('旅行',true)+'<div class="breadcrumb">マイドライブ › 動画 › 旅行</div><div class="search">⌕　このフォルダ内を検索</div><div class="toolbar"><span>更新日時順 ▾</span><span>'+driveBadge()+'</span></div><div class="content"><div class="folder-grid">'+folderCard('2025',true,7)+folderCard('2026',true,5)+'</div>'+videoRow('海辺.mp4',true)+videoRow('街歩き.mp4',true)+'</div>';
+    }
+    function detailMock() {
+      return statusBar()+appBar('動画詳細',true)+'<div class="content"><div class="preview">DRIVE VIDEO PREVIEW</div><h3 style="margin-top:12px">旅行_海辺.mp4 '+driveBadge()+'</h3><div class="panel" style="margin-top:12px"><div class="info-row"><span>保存場所</span><span>マイドライブ／動画／旅行</span></div><div class="info-row"><span>サイズ</span><span>82.4 MB</span></div><div class="info-row"><span>更新日時</span><span>2026/08/28</span></div></div><div class="panel"><div class="info-row"><span>共有</span><span>Driveリンク</span></div><div class="info-row"><span>名前変更</span><span>›</span></div><div class="info-row"><span>コピー／移動</span><span>›</span></div><div class="info-row"><span style="color:#6d7785">エディター</span><span style="color:#6d7785">端末コピー後</span></div><div class="info-row"><span style="color:#ff9898">ゴミ箱に移動</span><span>›</span></div></div></div>';
+    }
+    function renameMock() {
+      return detailMock()+'<div class="dialog-backdrop"><div class="dialog"><h4>名前変更</h4><p>拡張子は変更されません。</p><div class="input">旅行_海辺　　.mp4</div><div class="actions"><span>キャンセル</span><span>名前変更</span></div></div></div>';
+    }
+    function pickerMock(move) {
+      return statusBar()+appBar(move?'移動先フォルダ':'コピー先フォルダ',true)+'<div class="segment"><span>端末</span><span class="on">Google Drive</span></div><div class="breadcrumb">マイドライブ › 動画</div><div class="content"><div class="panel"><div class="panel-title">'+(move?'移動':'コピー')+'対象：動画 3件</div><div class="panel-text">'+(move?'転送と検証後に原本を削除します。':'非動画ファイルは処理しません。')+'</div></div><div class="folder-grid" style="margin-top:10px">'+folderCard('旅行',true,12)+folderCard('講座',true,6)+folderCard('バックアップ',true,0)+folderCard('新しいフォルダ',true,0)+'</div></div><div style="padding:10px 14px 16px"><div class="primary">'+(move?'ここに移動':'ここにコピー')+'</div></div>';
+    }
+    function transferMock() {
+      return statusBar()+appBar('動画を移動',true)+'<div class="content"><div class="drive-hero">58%</div><div class="center"><h3>Google Driveへ転送中</h3><p class="panel-text">端末／Movies → マイドライブ／動画</p></div><div class="panel" style="margin-top:18px"><div class="info-row"><span>現在</span><span>旅行_海辺.mp4</span></div><div class="info-row"><span>件数</span><span>3 / 5</span></div><div class="info-row"><span>転送量</span><span>184 / 316 MB</span></div><div class="progress"><i style="width:58%"></i></div></div><div class="button-stack"><div class="secondary">キャンセル</div></div><div class="panel-text center" style="margin-top:12px">検証完了後に端末の原本を削除します</div></div>';
+    }
+    function conflictMock() {
+      return pickerMock(false)+'<div class="dialog-backdrop"><div class="dialog"><h4>同じ名前の動画があります</h4><p>旅行_海辺.mp4 は保存先に既に存在します。</p><div class="button-stack"><div class="secondary">スキップ</div><div class="secondary">名前を変更</div><div class="secondary">置き換え</div></div><div class="info-row" style="margin-top:8px"><span>以降にも適用</span><span>OFF</span></div></div></div>';
+    }
+    function trashMock() {
+      return detailMock()+'<div class="dialog-backdrop"><div class="dialog"><h4>Google Driveのゴミ箱へ移動</h4><p>選択した動画をゴミ箱へ移動します。フォルダ内の文書や画像など、非動画ファイルは残ります。</p><div class="actions"><span>キャンセル</span><span class="danger-action">ゴミ箱に移動</span></div></div></div>';
+    }
+    function shareMock() {
+      return detailMock()+'<div class="dialog-backdrop"><div class="dialog"><h4>Driveリンクを共有</h4><p>動画本体ではなく閲覧リンクを共有します。共有権限は変更されないため、相手が動画を開けない場合があります。</p><div class="actions"><span>キャンセル</span><span>共有先を選択</span></div></div></div>';
+    }
+    function statesMock() {
+      return statusBar()+appBar('Driveの状態',true)+'<div class="content"><div class="state-stack"><div class="state-item"><b>オフライン</b><span>Drive動画の再生・同期・転送には接続が必要です</span></div><div class="state-item"><b>モバイルデータ</b><span>大容量通信を使用して続行しますか？</span></div><div class="state-item"><b>再接続が必要</b><span>Google Driveへのアクセス許可が失効しました</span></div><div class="state-item"><b>同期できませんでした</b><span>再試行　／　接続設定</span></div><div class="state-item"><b>部分成功</b><span>4件成功・1件失敗。失敗分を再試行できます</span></div><div class="state-item"><b>操作できません</b><span>このファイルを変更する権限がありません</span></div></div></div>';
+    }
+    function mock(kind) {
+      if (kind==="menuVideo") return menuMock(false);
+      if (kind==="menuFolder") return menuMock(true);
+      if (kind==="connect") return connectMock();
+      if (kind==="systemAccount") return systemMock(false);
+      if (kind==="systemConsent") return systemMock(true);
+      if (kind==="sync") return syncMock();
+      if (kind==="account") return accountMock();
+      if (kind==="disconnect") return disconnectMock();
+      if (kind==="videoList") return baseList('動画ライブラリ','video',false);
+      if (kind==="folderList") return baseList('フォルダ','folder',true);
+      if (kind==="folderDetail") return folderDetailMock();
+      if (kind==="detail") return detailMock();
+      if (kind==="rename") return renameMock();
+      if (kind==="copyPicker") return pickerMock(false);
+      if (kind==="movePicker") return pickerMock(true);
+      if (kind==="transfer") return transferMock();
+      if (kind==="conflict") return conflictMock();
+      if (kind==="trash") return trashMock();
+      if (kind==="share") return shareMock();
+      return statesMock();
+    }
+    const cards = document.getElementById("screenCards");
+    screens.forEach(function(s) {
+      const article = document.createElement("article");
+      article.className = "screen-card";
+      article.id = s.id;
+      const systemClass = s.kind.indexOf("system")===0 ? " system-boundary" : "";
+      const status = s.kind.indexOf("system")===0 ? '<span class="status system">システム境界</span>' : '<span class="status planned">設計案</span>';
+      article.innerHTML =
+        '<header><div><span class="id">'+s.id+'</span><h3>'+s.title+'</h3></div>'+status+'</header>'+
+        '<div class="screen-body">'+
+          '<div class="phone-wrap"><div class="phone'+systemClass+'" aria-label="'+s.title+'の模式図">'+mock(s.kind)+'</div></div>'+
+          '<div class="spec"><dl>'+
+            '<dt>目的</dt><dd>'+s.purpose+'</dd>'+
+            '<dt>到達</dt><dd>'+s.reach+'</dd>'+
+            '<dt>戻り先</dt><dd>'+s.back+'</dd>'+
+            '<dt>表示項目</dt><dd>'+s.items+'</dd>'+
+            '<dt>操作・遷移</dt><dd>'+s.ops+'</dd>'+
+            '<dt>状態差分</dt><dd>'+s.state+'</dd>'+
+          '</dl><h4>証跡区分</h4><p class="muted">未実装の提案仕様。模式図は架空データで構成し、実機観測結果を示すものではない。</p></div>'+
+        '</div>';
+      cards.appendChild(article);
+    });
+  </script>
+</body>
+</html>

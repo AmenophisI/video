@@ -194,6 +194,24 @@ class MediaStoreVideoRepository implements VideoRepository {
   }
 
   @override
+  Future<void> moveToSecureFolder(List<String> videoIds) async {
+    final videosById = {
+      for (final video in _videos) video.id: video,
+    };
+    final uris = [
+      for (final id in videoIds)
+        if (videosById[id] != null) videosById[id]!.uri,
+    ];
+    if (uris.isEmpty) {
+      return;
+    }
+
+    await _runFileOperation(
+      () => _fileOperationAdapter.moveToSecureFolder(uris),
+    );
+  }
+
+  @override
   Future<void> openVideoInEditor(String videoId) async {
     final video = await getVideo(videoId);
     if (video == null) {
@@ -484,6 +502,9 @@ class MediaStoreVideoRepository implements VideoRepository {
       rotationDegrees: dto.rotationDegrees,
       bitrate: dto.bitrate,
       frameRate: dto.frameRate,
+      videoCodec: dto.videoCodec,
+      audioCodec: dto.audioCodec,
+      audioChannelCount: dto.audioChannelCount,
       subtitleUri: dto.subtitleUri,
       createdAt: _dateTimeFromMs(dto.dateAddedAtMs ?? dto.modifiedAtMs),
       modifiedAt: _dateTimeFromMs(dto.modifiedAtMs ?? dto.dateAddedAtMs),
@@ -521,6 +542,9 @@ class MediaStoreVideoRepository implements VideoRepository {
       rotationDegrees: entry.rotationDegrees,
       bitrate: entry.bitrate,
       frameRate: entry.frameRate,
+      videoCodec: entry.videoCodec,
+      audioCodec: entry.audioCodec,
+      audioChannelCount: entry.audioChannelCount,
       subtitleUri:
           entry.subtitleUri == null ? null : Uri.tryParse(entry.subtitleUri!),
       createdAt: _dateTimeFromMs(entry.createdAtMs),
@@ -555,6 +579,9 @@ class MediaStoreVideoRepository implements VideoRepository {
       rotationDegrees: Value(video.rotationDegrees),
       bitrate: Value(video.bitrate),
       frameRate: Value(video.frameRate),
+      videoCodec: Value(video.videoCodec),
+      audioCodec: Value(video.audioCodec),
+      audioChannelCount: Value(video.audioChannelCount),
       subtitleUri: Value(video.subtitleUri?.toString()),
       createdAtMs: Value(video.createdAt?.millisecondsSinceEpoch),
       modifiedAtMs: Value(video.modifiedAt?.millisecondsSinceEpoch),

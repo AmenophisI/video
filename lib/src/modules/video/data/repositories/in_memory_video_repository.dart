@@ -128,6 +128,13 @@ class InMemoryVideoRepository implements VideoRepository {
   }
 
   @override
+  Future<void> moveToSecureFolder(List<String> videoIds) async {
+    for (final videoId in videoIds) {
+      _requireVideo(videoId);
+    }
+  }
+
+  @override
   Future<void> openVideoInEditor(String videoId) async {
     _requireVideo(videoId);
   }

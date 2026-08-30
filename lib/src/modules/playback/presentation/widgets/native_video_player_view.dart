@@ -73,6 +73,20 @@ class NativeVideoPlayerController {
     );
   }
 
+  Future<void> setPlaybackSpeed(double speed) async {
+    await _channel?.invokeMethod<void>(
+      'setPlaybackSpeed',
+      {'speed': speed},
+    );
+  }
+
+  Future<void> setResizeMode(String mode) async {
+    await _channel?.invokeMethod<void>(
+      'setResizeMode',
+      {'mode': mode},
+    );
+  }
+
   void _attach(int viewId) {
     _channel = MethodChannel('video_player/android_video_view_$viewId');
     _channel?.setMethodCallHandler((call) async {
@@ -126,7 +140,10 @@ class _NativeVideoPlayerViewState extends State<NativeVideoPlayerView> {
 
     return AndroidView(
       viewType: 'video_player/android_video_view',
-      hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+      // The native PlayerView is display-only. Keeping it out of Flutter's
+      // hit-test path lets the full-screen gesture layer receive taps and
+      // horizontal seeks even when a portrait video fills the whole screen.
+      hitTestBehavior: PlatformViewHitTestBehavior.transparent,
       layoutDirection: TextDirection.ltr,
       creationParams: {
         'uri': widget.uri.toString(),
@@ -134,8 +151,15 @@ class _NativeVideoPlayerViewState extends State<NativeVideoPlayerView> {
         'subtitleUri': widget.subtitleUri?.toString(),
       },
       creationParamsCodec: const StandardMessageCodec(),
-      onPlatformViewCreated: widget.controller._attach,
+      onPlatformViewCreated: _handlePlatformViewCreated,
     );
+  }
+
+  void _handlePlatformViewCreated(int viewId) {
+    widget.controller._attach(viewId);
+    if (widget.initialPosition > Duration.zero) {
+      unawaited(widget.controller.seekTo(widget.initialPosition));
+    }
   }
 }
 

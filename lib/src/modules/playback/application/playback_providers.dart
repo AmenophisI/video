@@ -21,6 +21,7 @@ final savePlaybackPositionUseCaseProvider =
   );
 });
 
-final playbackVideoProvider = FutureProvider.family<Video?, String>((ref, id) {
+final playbackVideoProvider =
+    FutureProvider.autoDispose.family<Video?, String>((ref, id) {
   return ref.watch(openVideoUseCaseProvider).call(id);
 });

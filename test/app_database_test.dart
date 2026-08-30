@@ -28,4 +28,29 @@ void main() {
 
     expect(await database.getVideoIndexEntries(), isEmpty);
   });
+
+  test('schema v3 stores extracted codec metadata', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    expect(database.schemaVersion, 3);
+    await database.replaceVideoIndexEntries([
+      VideoIndexEntriesCompanion.insert(
+        id: 'codec',
+        mediaStoreId: 2,
+        uri: 'content://media/external/video/media/2',
+        displayName: 'codec.mp4',
+        folderId: 'camera',
+        folderName: 'Camera',
+        videoCodec: const Value('video/avc'),
+        audioCodec: const Value('audio/mp4a-latm'),
+        audioChannelCount: const Value(2),
+      ),
+    ]);
+
+    final row = (await database.getVideoIndexEntries()).single;
+    expect(row.videoCodec, 'video/avc');
+    expect(row.audioCodec, 'audio/mp4a-latm');
+    expect(row.audioChannelCount, 2);
+  });
 }

@@ -194,4 +194,7 @@ class _FakeVideoRepository implements VideoRepository {
 
   @override
   Future<void> shareVideos(List<String> videoIds) async {}
+
+  @override
+  Future<void> moveToSecureFolder(List<String> videoIds) async {}
 }

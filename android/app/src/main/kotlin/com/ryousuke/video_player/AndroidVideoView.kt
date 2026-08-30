@@ -13,6 +13,7 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import io.flutter.plugin.common.BinaryMessenger
@@ -44,8 +45,11 @@ private class AndroidVideoPlatformView(
     private val playerView = PlayerView(context)
     private val errorText = TextView(context)
     private val player = ExoPlayer.Builder(context).build()
+    private val mediaSession = MediaSession.Builder(context, player).build()
     private var isMuted = false
     private var subtitleEnabled = true
+    private var initialPositionMs = 0L
+    private var hasAppliedInitialSeek = false
     private val channel = MethodChannel(
         messenger,
         "video_player/android_video_view_$viewId"
@@ -106,6 +110,18 @@ private class AndroidVideoPlatformView(
                     applySubtitleSelection()
                     result.success(null)
                 }
+                "setPlaybackSpeed" -> {
+                    val speed = (call.argument<Number>("speed"))?.toFloat() ?: 1f
+                    player.setPlaybackSpeed(speed.coerceIn(0.25f, 2f))
+                    result.success(null)
+                }
+                "setResizeMode" -> {
+                    playerView.resizeMode = when (call.argument<String>("mode")) {
+                        "zoom" -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                    result.success(null)
+                }
                 "position" -> result.success(player.currentPosition.coerceAtLeast(0L).toInt())
                 "duration" -> {
                     val duration = player.duration
@@ -118,6 +134,9 @@ private class AndroidVideoPlatformView(
 
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    applyInitialSeek()
+                }
                 if (playbackState == Player.STATE_ENDED) {
                     channel.invokeMethod("completed", null)
                 }
@@ -130,12 +149,13 @@ private class AndroidVideoPlatformView(
 
         val uriText = params?.get("uri") as? String
         val subtitleUriText = params?.get("subtitleUri") as? String
-        val initialPositionMs = (params?.get("initialPositionMs") as? Number)?.toLong() ?: 0L
+        initialPositionMs =
+            ((params?.get("initialPositionMs") as? Number)?.toLong() ?: 0L).coerceAtLeast(0L)
         if (uriText.isNullOrBlank()) {
             showError()
         } else {
             val mediaItem = buildMediaItem(uriText, subtitleUriText)
-            player.setMediaItem(mediaItem, initialPositionMs.coerceAtLeast(0L))
+            player.setMediaItem(mediaItem, initialPositionMs)
             applyVolume()
             applySubtitleSelection()
             player.prepare()
@@ -150,7 +170,17 @@ private class AndroidVideoPlatformView(
     override fun dispose() {
         channel.setMethodCallHandler(null)
         playerView.player = null
+        mediaSession.release()
         player.release()
+    }
+
+    private fun applyInitialSeek() {
+        if (hasAppliedInitialSeek || initialPositionMs <= 0L) {
+            return
+        }
+
+        hasAppliedInitialSeek = true
+        player.seekTo(initialPositionMs)
     }
 
     private fun buildMediaItem(uriText: String, subtitleUriText: String?): MediaItem {
